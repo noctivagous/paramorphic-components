@@ -52,6 +52,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-03 — Tree loader trust hardening
+
+Follow-up reproductions showed `loadTreePlan` accepting an invalid tree base and a non-array morph chain, and `chainForTreeSave` publishing a chain its own loader rejects (`src/framework/morphs/tree2.ts`). Fixed: new `checkTreeNodes` validates shape, unique ids, live folder parents, and cycles on base and cached snapshots; non-array `morphs` is an error; save publishes whole only when the loader's own checked replay accepts the chain, otherwise checkpoints. `verify:replay` §27 adds 18 checks (149 total) with `typecheck` and all builds green.
+
 ### 2026-11-03 — TASKS §3 disjoint-state and scoped-registry proof
 
 Review found §3 overstated: `PlanState` stayed `{ occupants, width, height, cursor? }`, `tree.*` reused Grid occupants, all vocabularies shared one `REGISTRY`. Fixed honestly: TASKS §3 items 2–4 and README §11.2 were downgraded to name the exact coupling before any code landed. Then `src/framework/tree-state.ts` (`TreeState = { nodes }`, no Grid fields), `src/framework/morphs/scoped.ts` (`createMorphRegistry<S>()` with per-scope maps), and `src/framework/morphs/tree2.ts` (disjoint `tree.addNode`/`removeNode`/`reparent` plus `loadTreePlan`/`chainForTreeSave`) proved the revised contract: disjoint vocabularies, validation, checked replay, undo/redo with snapshot fallback, JSON serialization, file load with tamper rejection, and save checkpoints. `verify:replay` §§25–26 add 24 checks (131 total, was 107) with `typecheck`, `build`, `build:spreadsheet`, `build:player` green. Honest limits: `history.ts` stays `PlanState`-typed (disjoint history reuses the snapshot+morph pattern through the scoped registry); Grid-hosted `tree.*` kept for backwards compatibility.

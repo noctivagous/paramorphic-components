@@ -126,6 +126,52 @@ treeRegistry.register<{ id: string; parent: string }>({
   },
 });
 
+/** Base/snapshot validation: shape, unique ids, live folder parents, no cycles. */
+export function checkTreeNodes(nodes: unknown): string[] {
+  if (!Array.isArray(nodes)) return ["tree nodes must be an array"];
+  const list = nodes as TreeNode[];
+  const errs: string[] = [];
+  list.forEach((n, i) => {
+    for (const e of validateNodeShape(n)) errs.push(`nodes[${i}]: ${e}`);
+  });
+  const seen = new Map<string, number>();
+  list.forEach((n, i) => {
+    if (n && typeof n.id === "string" && n.id) {
+      if (seen.has(n.id)) errs.push(`duplicate node "${n.id}" (nodes[${seen.get(n.id)}] and nodes[${i}])`);
+      else seen.set(n.id, i);
+    }
+  });
+  const byId = new Map<string, TreeNode>();
+  for (const n of list) {
+    if (n && typeof n.id === "string" && n.id && !byId.has(n.id)) byId.set(n.id, n);
+  }
+  for (const n of list) {
+    if (!n || typeof n.id !== "string" || !n.id) continue;
+    if (n.parent !== null && n.parent !== undefined) {
+      if (typeof n.parent !== "string") continue; // shape error already reported
+      const target = byId.get(n.parent);
+      if (!target) errs.push(`node "${n.id}" parent "${n.parent}" is not present`);
+      else if (target.kind !== "folder") errs.push(`parent "${n.parent}" is a ${target.kind}, not a folder`);
+    }
+  }
+  for (const n of list) {
+    if (!n || typeof n.id !== "string" || !n.id) continue;
+    const visited = new Set<string>([n.id]);
+    let cur: string | null | undefined = n.parent;
+    while (typeof cur === "string" && cur) {
+      if (visited.has(cur)) {
+        errs.push(`cycle at node "${n.id}" via "${cur}"`);
+        break;
+      }
+      visited.add(cur);
+      const next = byId.get(cur);
+      if (!next) break;
+      cur = next.parent;
+    }
+  }
+  return errs;
+}
+
 export type TreePlanFile = {
   $schema?: string;
   base: TreeState;
@@ -135,20 +181,36 @@ export type TreePlanFile = {
 
 export function loadTreePlan(file: TreePlanFile): { ok: true; state: TreeState; morphs: TreePlanFile["morphs"] } | { ok: false; errors: string[] } {
   if (!file || typeof file !== "object") return { ok: false, errors: ["tree plan must be an object"] };
-  if (!file.base || !Array.isArray(file.base.nodes)) return { ok: false, errors: ["tree plan.base must be { nodes }"] };
+  const errors: string[] = [];
   if (file.$schema !== undefined && file.$schema !== "paramorphic-plan/1") {
-    return { ok: false, errors: [`unsupported plan version "${file.$schema}"`] };
+    errors.push(`unsupported plan version "${file.$schema}"`);
   }
-  const morphs = Array.isArray(file.morphs) ? file.morphs : [];
-  for (const e of treeRegistry.validateChain(morphs)) return { ok: false, errors: [e] };
-  const replayed = treeRegistry.replayMorphsChecked(file.base, morphs, {}, cloneTreeState);
+  let base: TreeState | null = null;
+  if (!file.base || typeof file.base !== "object" || !Array.isArray((file.base as TreeState).nodes)) {
+    errors.push("tree plan.base must be { nodes }");
+  } else {
+    for (const e of checkTreeNodes((file.base as TreeState).nodes)) errors.push(`base.${e}`);
+    if (errors.length === 0) base = file.base;
+  }
+  let morphs: TreePlanFile["morphs"] = [];
+  if (file.morphs !== undefined) {
+    if (!Array.isArray(file.morphs)) {
+      errors.push("tree plan.morphs must be an array");
+    } else {
+      morphs = file.morphs;
+      for (const e of treeRegistry.validateChain(morphs)) errors.push(e);
+    }
+  }
+  if (errors.length > 0) return { ok: false, errors };
+  const replayed = treeRegistry.replayMorphsChecked(base as TreeState, morphs, {}, cloneTreeState);
   if (!replayed.ok) return { ok: false, errors: replayed.errors };
-  const expected: TreeState = file.nodes ? { nodes: file.nodes } : replayed.state;
-  if (file.nodes) {
-    const mismatch = treeNodesEqual(replayed.state, expected);
+  if (file.nodes !== undefined) {
+    const cacheErrors = checkTreeNodes(file.nodes);
+    if (cacheErrors.length > 0) return { ok: false, errors: cacheErrors.map(e => `nodes: ${e}`) };
+    const mismatch = treeNodesEqual(replayed.state, { nodes: file.nodes });
     if (mismatch) return { ok: false, errors: [`tree plan replay mismatch: ${mismatch}`] };
   }
-  return { ok: true, state: replayed.state, morphs: treeRegistry.recaptureFrames(file.base, morphs, cloneTreeState) };
+  return { ok: true, state: replayed.state, morphs: treeRegistry.recaptureFrames(base as TreeState, morphs, cloneTreeState) };
 }
 
 export function chainForTreeSave(
@@ -156,9 +218,22 @@ export function chainForTreeSave(
   chain: TreePlanFile["morphs"],
   current: TreeState
 ): { base: TreeState; morphs: TreePlanFile["morphs"]; checkpointed: boolean } {
-  const replayed = treeRegistry.replayMorphs(base, chain, {}, cloneTreeState);
-  if (replayed.ok && treeNodesEqual(replayed.state, current) === null) {
-    return { base, morphs: chain, checkpointed: false };
+  // Publish the full chain only when the loader itself would accept it:
+  // valid base, array chain, clean param validation, checked replay, and an
+  // exact match. Anything else checkpoints the snapshot instead of shipping
+  // a chain the loader rejects.
+  const baseOk =
+    !!base && typeof base === "object" && checkTreeNodes((base as TreeState).nodes).length === 0;
+  const currentOk =
+    !!current && typeof current === "object" && checkTreeNodes((current as TreeState).nodes).length === 0;
+  if (baseOk && currentOk && Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0) {
+    const replayed = treeRegistry.replayMorphsChecked(base, chain, {}, cloneTreeState);
+    if (replayed.ok && treeNodesEqual(replayed.state, current) === null) {
+      return { base, morphs: chain, checkpointed: false };
+    }
   }
-  return { base: { nodes: current.nodes.map(n => ({ ...n })) }, morphs: [], checkpointed: true };
+  const nodes = Array.isArray((current as TreeState)?.nodes)
+    ? (current as TreeState).nodes.map(n => ({ ...n }))
+    : [];
+  return { base: { nodes }, morphs: [], checkpointed: true };
 }

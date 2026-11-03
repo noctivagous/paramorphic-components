@@ -779,5 +779,71 @@ for (const f of files) {
     }).length === 1);
 }
 
+// 27. Disjoint loader trust: invalid bases rejected, chains must be arrays,
+// and save never publishes a chain its own loader rejects.
+{
+  const goodRoot = { id: "root", kind: "folder", parent: null, label: "albums" };
+  const goodKid = { id: "vac", kind: "folder", parent: "root", label: "vacation" };
+  const add = (node: any) => ({ name: "tree.addNode", params: { node }, inverse: { prev: null } });
+  // Invalid bases load as errors, never success.
+  const badBases: [string, any][] = [
+    ["empty id", { nodes: [{ ...goodRoot, id: "" }] }],
+    ["bad kind", { nodes: [{ ...goodRoot, kind: "leaf" }] }],
+    ["missing label", { nodes: [{ ...goodRoot, label: "" }] }],
+    ["Grid fields", { nodes: [{ ...goodRoot, anchor: { q: 0, r: 0 } }] }],
+    ["duplicate ids", { nodes: [goodRoot, { ...goodRoot, label: "copy" }] }],
+    ["orphan parent", { nodes: [{ ...goodKid }] }],
+    ["file parent", { nodes: [
+      { id: "f", kind: "file", parent: null, label: "f" },
+      { id: "k", kind: "folder", parent: "f", label: "k" },
+    ] }],
+    ["self parent", { nodes: [{ ...goodRoot, parent: "root" }] }],
+    ["two-node cycle", { nodes: [
+      { id: "a", kind: "folder", parent: "b", label: "a" },
+      { id: "b", kind: "folder", parent: "a", label: "b" },
+    ] }],
+    ["non-array nodes", { nodes: 42 }],
+  ];
+  for (const [label, base] of badBases) {
+    const res = loadTreePlan({ base, morphs: [] } as any);
+    check(`invalid tree base rejected (${label})`, !res.ok, res.ok ? "loaded" : "");
+  }
+  let threw = false;
+  try {
+    loadTreePlan({ base: { nodes: 42 }, morphs: [] } as any);
+  } catch {
+    threw = true;
+  }
+  check("malformed tree base never throws", !threw);
+  // A non-array morph chain is an error, not an empty chain.
+  const nonArray = loadTreePlan({ base: { nodes: [] }, morphs: "nope" } as any);
+  check("non-array tree morphs rejected", !nonArray.ok, nonArray.ok ? "loaded" : "");
+  if (!nonArray.ok) {
+    check("non-array message actionable",
+      nonArray.errors.some(e => e.includes("must be an array")), nonArray.errors.join("; "));
+  }
+  // Save checkpoints any chain the loader rejects (duplicate add replays
+  // unchecked but fails the checked load path).
+  const dup = { ...goodRoot, label: "copy" };
+  const dupChain = [add(goodRoot), add(dup)];
+  const dupCurrent = { nodes: [goodRoot, dup] };
+  check("duplicate chain fails the loader",
+    !loadTreePlan({ base: { nodes: [] }, morphs: dupChain } as any).ok);
+  const dupSave = chainForTreeSave({ nodes: [] }, dupChain, dupCurrent as any);
+  check("save checkpoints a loader-rejected chain", dupSave.checkpointed && dupSave.morphs.length === 0);
+  const orphanChain = [add(goodKid)];
+  const orphanSave = chainForTreeSave({ nodes: [] }, orphanChain, { nodes: [goodKid] } as any);
+  check("save checkpoints an inapplicable chain", orphanSave.checkpointed && orphanSave.morphs.length === 0);
+  // And a clean chain still publishes whole and reloads.
+  const cleanChain = [add(goodRoot), add(goodKid)];
+  const cleanSave = chainForTreeSave({ nodes: [] }, cleanChain, { nodes: [goodRoot, goodKid] });
+  check("clean disjoint chain still saves whole", !cleanSave.checkpointed && cleanSave.morphs.length === 2);
+  const cleanReload = loadTreePlan({
+    $schema: "paramorphic-plan/1", base: cleanSave.base, morphs: cleanSave.morphs,
+    nodes: [goodRoot, goodKid],
+  } as any);
+  check("saved clean chain reloads", cleanReload.ok, cleanReload.ok ? "" : (cleanReload as any).errors.join("; "));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
