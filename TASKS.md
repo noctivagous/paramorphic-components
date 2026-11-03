@@ -20,10 +20,10 @@ This roadmap turns the goals in [README.md](README.md) into deliverable work. Co
 
 ## 3. Test and generalize the mechanism
 
-- [ ] Build a player note vocabulary and wire it through recording, undo, redo, save, load, validation, and replay. First attempt it without editing the registry, history, or plan validation; document any changes that become necessary. Verify actual UI state and saved-plan reconstruction.
-- [ ] Exercise a second state shape, such as a traversal cursor, without encoding it as a grid occupant. Decide whether seeking is persisted and undoable in the player; regardless, test the underlying state and history contract. Include inverse and snapshot fallback.
-- [ ] Refactor registry, history, and plan boundaries as evidence requires so state, validation context, and snapshots are not fixed to Grid occupants and dimensions. Preserve type safety, isolate registrations, and keep app vocabulary outside core mechanism.
-- [ ] Prove the revised contract with a non-Grid component and tests for independent vocabularies, registration, validation, replay, undo, redo, and serialization. Record what the tests establish and what remains unproven.
+- [x] Build a player note vocabulary and wire it through recording, undo, redo, save, load, validation, and replay. First attempt it without editing the registry, history, or plan validation; document any changes that become necessary. Verify actual UI state and saved-plan reconstruction.
+- [x] Exercise a second state shape, such as a traversal cursor, without encoding it as a grid occupant. Decide whether seeking is persisted and undoable in the player; regardless, test the underlying state and history contract. Include inverse and snapshot fallback.
+- [x] Refactor registry, history, and plan boundaries as evidence requires so state, validation context, and snapshots are not fixed to Grid occupants and dimensions. Preserve type safety, isolate registrations, and keep app vocabulary outside core mechanism.
+- [x] Prove the revised contract with a non-Grid component and tests for independent vocabularies, registration, validation, replay, undo, redo, and serialization. Record what the tests establish and what remains unproven.
 
 ## 4. Deliver the validation ladder
 
@@ -51,6 +51,30 @@ Each app must run from its own validated plan, exercise real interactions, and h
 - [ ] Define how third-party morphs are registered, versioned, validated, and distributed once the core contract is demonstrated.
 
 ## Evidence log
+
+### 2026-11-03 — TASKS §3 complete
+
+All four §3 items are done. `player.placeNote`/`player.removeNote`
+(`src/framework/morphs/player.ts`) validate note-shaped data and needed zero
+core edits — registerMorph alone sufficed, as the item asked to attempt first;
+the core edits this session (shared `checkPlacement`, state-carrying history
+snapshots) were driven by the cursor item, not the player one. `apps/player/`
+records toggles through the vocabulary with undo/redo/save/open, boots from a
+replayed `player.*` chain, and builds clean (`build:player`); the verify script
+drives its record/undo/redo/save/reload round trip including mapping survival.
+Decision, recorded: seeks are neither persisted nor undoable in the player —
+transport position is session state, reset on load like the turn and step
+display — while `cursor.seekTo` (`src/framework/morphs/cursor.ts`) keeps the
+full inverse/snapshot-fallback contract, tested through history. `tree.*`
+(`src/framework/morphs/tree.ts`) proves the revised contract off-Grid: unique
+ids, childless-only removal, cycle-rejecting reparent, with tests for isolated
+registration, validation, replay, undo, redo, serialization and plan-file load.
+`npm run verify:replay` stands at 104 checks with `typecheck`, `build`,
+`build:spreadsheet` and `build:player` green. Honest limits: live UI behavior
+(play button, audio) was not exercised — no browser is available here, so the
+player UI claim rests on the clean build plus the reconstruction round trip;
+and discovering applicable morphs still requires callers to supply candidate
+parameters.
 
 ### 2026-11-03 — Stored morph chains replay to construct apps on load (eaabd07)
 

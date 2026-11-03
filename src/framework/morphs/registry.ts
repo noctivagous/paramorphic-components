@@ -5,11 +5,19 @@
 // explicitly marked otherwise; non-invertible morphs carry the sub-state they
 // need inside the undo frame (see AppliedMorph.inverse).
 import type { Occupant } from "../types";
+import type { TraversalCursor } from "../traversal";
 
 export type PlanState = {
   occupants: Occupant[];
   width: number;
   height: number;
+  /**
+   * Second state shape: a traversal cursor rides along opaquely. Grid
+   * morphs preserve it untouched via spread; cursor morphs own it. History
+   * snapshots carry it, so recorded seeks undo like any morph; plan files
+   * never persist it — load resets it to the path start.
+   */
+  cursor?: TraversalCursor | null;
 };
 
 export type MorphContext = {
@@ -55,6 +63,19 @@ export type AppliedMorph<P = unknown> = {
   /** Sub-state captured at apply time for a faithful inverse (Q4 policy). */
   inverse?: unknown;
 };
+
+/**
+ * Shared strict frame reader: an absent or content-free undo frame is a
+ * failure, never a guess. In particular `{}` carries no `prev` key and must
+ * not be read as "nothing was there" — that reading can delete a replaced
+ * occupant. Throw so the caller falls back to a snapshot restore.
+ */
+export function needPrevFrame<T>(undoCtx: unknown, morph: string): { prev?: T | null } {
+  if (!undoCtx || typeof undoCtx !== "object" || !("prev" in (undoCtx as Record<string, unknown>))) {
+    throw new Error(`${morph} has no inverse data; cannot invert`);
+  }
+  return undoCtx as { prev?: T | null };
+}
 
 const REGISTRY = new Map<string, MorphDef<any>>();
 

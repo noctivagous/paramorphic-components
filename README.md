@@ -1,5 +1,27 @@
 # Paramorphic Components
 
+## Q and A
+
+> Most of the GUI in apps is rectangular, makes use of grids.
+
+Yes. A grid is a strong foundation for a large share of GUI work: forms, tables, calendars, dashboards, timelines, menus, and many layouts all arrange things in rows and columns.
+
+The opportunity is bigger than drawing rectangles. If the same grid also provides sizing, nesting, interaction, navigation, and rules, apps can share substantial behavior as well as layout.
+
+> Even just for GUI, when we made our first demo, from the same generic component we were able to make chess, checkers, calendar layouts and setups.  Each one stemmed
+from the same root component because it is recognized that they carry similar features and facets
+
+Chess, checkers, and a calendar look like different GUI problems, yet each can use the same underlying grid with different occupants, layout, and behavior. Reusing that foundation 
+can eliminate substantial repeated UI work even before the full morph runtime exists.
+
+> Our grid component is flexible enough to make keyboards, meaning that we know that elements will be offset and some will be larger than others.
+
+A keyboard is a stronger example than a uniform table: keys vary in size and rows are offset. If your Grid represents those, that shows it can handle irregular layouts, not just equal-sized cells.
+
+That broadens the case for using it as a common GUI foundation. The useful next proof is to build and test the keyboard from a plan, including resizing and interaction, so that capability is established in the current runtime.
+
+
+
 ## 1. Thesis
 
 Programmers today start from finished, application-shaped components (a data table, a calendar, a tiling map) that have nothing in common with each other. Checkers and chess therefore end up with separate code bases, and AI-generated code arrives in pages that do not reflect the programmer’s own approach and must be reviewed line by line.
@@ -375,7 +397,7 @@ apps/spreadsheet/
   morph-plans/*.json    # the app itself; validated by loadPlan on use
 ```
 
-Rules: one app per directory; each app owns its morph-plans; framework and views stay shared by relative import with the shared toolchain — no per-app packaging until an app needs independent versioning. Run with `npm run dev:spreadsheet`, ship with `npm run build:spreadsheet`. Menus, undo history and file save live in the shell; the plan file stays the source of truth, so save writes a morph-plan and open validates it back through `loadPlan`.
+Rules: one app per directory; each app owns its morph-plans; framework and views stay shared by relative import with the shared toolchain — no per-app packaging until an app needs independent versioning. Run with `npm run dev:spreadsheet`, ship with `npm run build:spreadsheet` (player: `dev:player`, `build:player`). Menus, undo history and file save live in the shell; the plan file stays the source of truth, so save writes a morph-plan and open validates it back through `loadPlan`. `apps/spreadsheet/` and `apps/player/` both follow this shape; the player records through its own `player.*` vocabulary instead of the sheet's.
 
 ### 9.1 Runtime layers and AI assembly
 
@@ -398,7 +420,7 @@ AI assembles apps under four rules:
 - **Introspection guides the work.** The AI asks what has been morphed so far and which morphs apply next, so it starts from the current state instead of guessing.
 - **Custom code is the exception.** It lives in a named morph that can be reviewed alone.
 
-Runtime status: the morph registry exists (`src/framework/morphs/registry.ts`, replay via `replayMorphs`, introspection via `listMorphs`/`describeChain`). Stored plans carry a `base` plus a `morphs[]` chain and are constructed by replay on load: `loadPlan` (`src/framework/plan.ts`) replays base + morphs and rejects the file when the result differs from the cached snapshot, so a plan is never partially applied. The generic occupant/dimension vocabulary lives in `src/framework/morphs/grid.ts` (`grid.upsertOccupant`, `grid.removeOccupant`, `grid.resize`); the spreadsheet, sequencer/player and chat files all boot from replayed chains (11, 3 and 5 morphs over an empty base), the spreadsheet shell boots and saves through the same path, and the demo shell reports the replayed provenance. Check with `npm run verify:replay` (72 checks). Earlier-morph removal and replacement replay dependents with step-indexed conflict reports (`removeMorphAt`, `replaceMorphAt`); candidate morphs are tested against the exact state (`checkMorphState`: bounds, presence, collisions) and chains read in human terms (`describeChain`); a save publishes the full chain only when it still replays, otherwise an honest snapshot checkpoint (`chainForSave`); absent or content-free inverse data throws so undo falls back to the snapshot instead of guessing; inverse frames are re-derived from the replay on load and after chain surgery (`recaptureFrames`); unknown `$schema` versions are rejected and malformed bases report errors without throwing. Spreadsheet undo pops applied morphs via their inverses (`sheet.setCell`, `sheet.clearCell` in `src/framework/morphs/sheet.ts`); the snapshot history stack remains as the fallback for steps no morph covers. Morphs that cannot invert declare `invertible: false` and use the snapshot path (the Q4 policy).
+Runtime status: the morph registry exists (`src/framework/morphs/registry.ts`, replay via `replayMorphs`, introspection via `listMorphs`/`describeChain`). Stored plans carry a `base` plus a `morphs[]` chain and are constructed by replay on load: `loadPlan` (`src/framework/plan.ts`) replays base + morphs and rejects the file when the result differs from the cached snapshot, so a plan is never partially applied. The generic occupant/dimension vocabulary lives in `src/framework/morphs/grid.ts` (`grid.upsertOccupant`, `grid.removeOccupant`, `grid.resize`); the spreadsheet, sequencer/player and chat files all boot from replayed chains (11, 3 and 5 morphs over an empty base), the spreadsheet shell boots and saves through the same path, and the demo shell reports the replayed provenance. Check with `npm run verify:replay` (104 checks: §2 paths plus player record/undo/redo/save/load, cursor history contract, and tree registration/validation/replay/undo/redo/serialization). Earlier-morph removal and replacement replay dependents with step-indexed conflict reports (`removeMorphAt`, `replaceMorphAt`); candidate morphs are tested against the exact state (`checkMorphState`: bounds, presence, collisions) and chains read in human terms (`describeChain`); a save publishes the full chain only when it still replays, otherwise an honest snapshot checkpoint (`chainForSave`); absent or content-free inverse data throws so undo falls back to the snapshot instead of guessing; inverse frames are re-derived from the replay on load and after chain surgery (`recaptureFrames`); unknown `$schema` versions are rejected and malformed bases report errors without throwing. Spreadsheet undo pops applied morphs via their inverses (`sheet.setCell`, `sheet.clearCell` in `src/framework/morphs/sheet.ts`); the snapshot history stack remains as the fallback for steps no morph covers. Morphs that cannot invert declare `invertible: false` and use the snapshot path (the Q4 policy).
 
 ## 10. Reconciliation log
 
@@ -476,6 +498,10 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 | Formula recalc with quarantine | Spreadsheet revealed the morph: `applyFormulas` recomputes `data.formula` cells in DAG order into `data.computed`; a cycle quarantines only its cells and dependents (Kahn's algorithm), never the sheet | `src/framework/morphs/formulas.ts` |
 | Framing without transport | Chat revealed the split: the length-prefix codec (`encodeFrame`/`decodeStream`, partial frames buffered) is framework vocabulary; delivery stays a platform adapter, still deferred | `src/framework/morphs/framing.ts` |
 | Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `morph-plans/*.json`, `src/views/` |
+| Player note vocabulary | Morph-library vocabulary over the editing mechanism: `player.placeNote`/`player.removeNote` validate note-shaped data (finite pitch, 0..1 velocity); the player app records, undoes and replays through it, never through grid/sheet morphs | `src/framework/morphs/player.ts`, `apps/player/` |
+| Cursor as carried state | Second state shape without a new substrate: `PlanState.cursor` rides along opaquely (grid morphs preserve it by spread), seeks undo when recorded via `cursor.seekTo`, files never persist it — the player shell leaves seeks unrecorded as transport position | `src/framework/morphs/cursor.ts`, `src/framework/history.ts` |
+| State-carrying history | Snapshots are whole plan states, not occupant lists, so later shapes undo through the same contract; placement checks shared by every occupant vocabulary (`checkPlacement`) | `src/framework/history.ts`, `src/framework/editing.ts` |
+| Tree vocabulary (non-Grid proof) | Hierarchy over the same occupants with invariants grids lack: unique ids, childless-only removal, cycle-rejecting reparent; replay, undo, redo and file load run unchanged | `src/framework/morphs/tree.ts` |
 
 Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 

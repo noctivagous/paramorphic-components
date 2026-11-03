@@ -7,16 +7,23 @@ import {
   applyMorph,
   checkMorphState,
   describeChain,
+  getMorph,
   invertMorph,
+  listMorphs,
   registerMorph,
   removeMorphAt,
   replaceMorphAt,
   replayMorphs,
 } from "../src/framework/morphs/registry";
 import { pushHistory, redoHistory, undoHistory } from "../src/framework/history";
+import { createCursor } from "../src/framework/traversal";
 import { buildSheetSave } from "../apps/spreadsheet/src/save";
+import { buildPlayerSave, mappingOf } from "../apps/player/src/save";
 import "../src/framework/morphs/sheet";
 import "../src/framework/morphs/grid";
+import "../src/framework/morphs/player";
+import "../src/framework/morphs/cursor";
+import "../src/framework/morphs/tree";
 
 let pass = 0;
 let fail = 0;
@@ -35,6 +42,9 @@ const files = [
   { path: "morph-plans/sequencer.json", morphs: 3, occupants: 3 },
   { path: "morph-plans/chat.json", morphs: 5, occupants: 5 },
 ];
+
+// History now snapshots whole states; wrap occupant lists for the 5x4 cases.
+const st = (occupants: any[], width = 5, height = 4) => ({ occupants, width, height });
 
 // 1. Each stored plan replays to its cached snapshot.
 for (const f of files) {
@@ -144,32 +154,31 @@ for (const f of files) {
   let cur: any[] = [];
   for (let i = 0; i < 55; i++) {
     const next = [{ id: `c-${i}`, anchor: { q: 0, r: 0 }, span: [], type: "cell", data: {}, tags: [] }];
-    past = pushHistory(past, cur, null);
+    past = pushHistory(past, st(cur), null);
     cur = next;
   }
   check("history capped at 50", past.length === 50, `got ${past.length}`);
   // 55 pushes keep the last 50 pre-edit snapshots (edits 5..54); the earliest
   // surviving entry holds the state before edit 5, which contains only c-4.
-  const firstIds = past[0].snapshot.map((o: any) => o.id);
+  const firstIds = past[0].snapshot.occupants.map((o: any) => o.id);
   check("truncation drops the oldest steps", JSON.stringify(firstIds) === JSON.stringify(["c-4"]),
     JSON.stringify(firstIds));
 }
 
 // 9. Undo followed by a new edit: redo is gone, the new branch holds.
 {
-  const dims = { width: 5, height: 4 };
   const s0: any[] = [];
   const s1 = [{ id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 1 }, tags: [] }];
   const s2 = [{ id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 2 }, tags: [] }];
-  let past = pushHistory([], s0, null);
-  past = pushHistory(past, s1, null);
-  const u = undoHistory(past, [], s2, dims);
-  check("undo restores s1", u.undone && JSON.stringify(u.occupants) === JSON.stringify(s1));
+  let past = pushHistory([], st(s0), null);
+  past = pushHistory(past, st(s1), null);
+  const u = undoHistory(past, [], st(s2));
+  check("undo restores s1", u.undone && JSON.stringify(u.state.occupants) === JSON.stringify(s1));
   // New edit on the undone state, as the shell does (future cleared).
   const s3 = [{ id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 3 }, tags: [] }];
-  const branched = pushHistory(u.past, u.occupants, null);
-  const r = redoHistory(branched, [], s3, dims);
-  check("redo after new edit is a no-op", !r.redone && JSON.stringify(r.occupants) === JSON.stringify(s3));
+  const branched = pushHistory(u.past, u.state, null);
+  const r = redoHistory(branched, [], st(s3));
+  check("redo after new edit is a no-op", !r.redone && JSON.stringify(r.state.occupants) === JSON.stringify(s3));
 }
 
 // 10. Inverse capture and failure semantics.
@@ -189,9 +198,9 @@ for (const f of files) {
   const snapshot = [prev];
   const current = [next];
   const u = undoHistory(
-    [{ snapshot, morph: { name: "sheet.setCell", params: { occ: next } } }],
-    [], current, dims);
-  check("missing inverse restores snapshot", u.undone && JSON.stringify(u.occupants) === JSON.stringify(snapshot));
+    [{ snapshot: st(snapshot), morph: { name: "sheet.setCell", params: { occ: next } } }],
+    [], st(current));
+  check("missing inverse restores snapshot", u.undone && JSON.stringify(u.state.occupants) === JSON.stringify(snapshot));
   // Non-invertible steps use the snapshot path too.
   registerMorph({
     name: "test.volatile",
@@ -202,9 +211,9 @@ for (const f of files) {
     invert: (state) => state,
   });
   const v = undoHistory(
-    [{ snapshot: [], morph: { name: "test.volatile", params: {}, inverse: {} } }],
-    [], [next], dims);
-  check("non-invertible step restores snapshot", v.undone && v.occupants.length === 0);
+    [{ snapshot: st([]), morph: { name: "test.volatile", params: {}, inverse: {} } }],
+    [], st([next]));
+  check("non-invertible step restores snapshot", v.undone && v.state.occupants.length === 0);
 }
 
 // 11. Applicability: a candidate morph against the exact current state.
@@ -341,10 +350,10 @@ for (const f of files) {
     { name: "sheet.setCell", params: { occ: next }, inverse: {} });
   check("empty frame inverts to fallback", inverted === null);
   const u = undoHistory(
-    [{ snapshot: [prev], morph: { name: "sheet.setCell", params: { occ: next }, inverse: {} } }],
-    [], [next], dims);
-  check("empty frame undoes to snapshot", u.undone && JSON.stringify(u.occupants) === JSON.stringify([prev]),
-    JSON.stringify(u.occupants));
+    [{ snapshot: st([prev]), morph: { name: "sheet.setCell", params: { occ: next }, inverse: {} } }],
+    [], st([next]));
+  check("empty frame undoes to snapshot", u.undone && JSON.stringify(u.state.occupants) === JSON.stringify([prev]),
+    JSON.stringify(u.state.occupants));
 }
 
 // 19. Chain surgery refreshes later frames: no ghost restores on undo.
@@ -384,7 +393,7 @@ for (const f of files) {
     const size = { w: opened.plan.width, h: opened.plan.height };
     const extra = { id: "c-3-3", anchor: { q: 3, r: 3 }, span: [], type: "cell", data: { value: 3 }, tags: [] };
     const occupants = [...(opened.plan.occupants ?? []), extra];
-    const past = pushHistory([], opened.plan.occupants ?? [],
+    const past = pushHistory([], st(opened.plan.occupants ?? []),
       { name: "sheet.setCell", params: { occ: extra }, inverse: { prev: null } });
     const { plan, checkpointed } = buildSheetSave({
       settings, size, occupants, base: opened.plan.base, adopted: opened.plan.morphs, past,
@@ -430,7 +439,6 @@ for (const f of files) {
     interpretation: null,
   };
   const size = { w: 8, h: 8 };
-  const dims = { width: 8, height: 8 };
   const base = { occupants: [], width: 8, height: 8 };
   // 55 single-cell writes against the 50-cap: the first 5 steps fall off,
   // so no saved chain can reconstruct the board from the base.
@@ -443,7 +451,7 @@ for (const f of files) {
       span: [], type: "cell", data: { value: i }, tags: [],
     };
     const before = cur;
-    past = pushHistory(past, before,
+    past = pushHistory(past, st(before, 8, 8),
       { name: "sheet.setCell", params: { occ: cell }, inverse: { prev: null } });
     cur = [...cur, cell];
   }
@@ -458,14 +466,14 @@ for (const f of files) {
     reloaded.ok ? "" : reloaded.errors.join("; "));
   // Branching: undo the last write, store a different value in its cell,
   // save through the same helper, reload.
-  const u = undoHistory(past, [], cur, dims);
-  check("branch undo drops t-54", u.undone && !u.occupants.some(o => o.id === "t-54"));
+  const u = undoHistory(past, [], st(cur, 8, 8));
+  check("branch undo drops t-54", u.undone && !u.state.occupants.some(o => o.id === "t-54"));
   const branchedCell = {
     id: "t-54", anchor: { q: 54 % 8, r: Math.floor(54 / 8) },
     span: [], type: "cell", data: { value: "branch" }, tags: [],
   };
-  const branchedOcc = [...u.occupants, branchedCell];
-  const branchedPast = pushHistory(u.past, u.occupants,
+  const branchedOcc = [...u.state.occupants, branchedCell];
+  const branchedPast = pushHistory(u.past, u.state,
     { name: "sheet.setCell", params: { occ: branchedCell }, inverse: { prev: null } });
   const bSaved = buildSheetSave({
     settings, size, occupants: branchedOcc, base, adopted: [], past: branchedPast,
@@ -476,6 +484,165 @@ for (const f of files) {
     const found = (bReloaded.plan.occupants ?? []).find(o => o.id === "t-54");
     check("branch value survives", (found?.data as any)?.value === "branch", JSON.stringify(found?.data));
   }
+}
+
+// 22. Player vocabulary: own terms, wired through save/load/undo.
+{
+  const data = JSON.parse(readFileSync("apps/player/morph-plans/player.json", "utf8"));
+  const res = loadPlan({ data, errors: [] }, null);
+  check("player plan loads by replay", res.ok, res.ok ? "" : res.errors.join("; "));
+  if (res.ok) {
+    check("player chain speaks player",
+      res.plan.morphs.length === 3 && res.plan.morphs.every(m => m.name.startsWith("player.")),
+      res.plan.morphs.map(m => m.name).join(","));
+    check("player yields 3 notes", (res.plan.occupants ?? []).length === 3);
+    // Note-shaped validation: a grid cell is not a note, bad vel is not music.
+    const cell = { id: "x", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: {}, tags: [] };
+    check("player rejects non-notes",
+      checkMorphState("player.placeNote", st([]), { occ: cell }).length === 1);
+    const loud = { id: "y", anchor: { q: 1, r: 1 }, span: [], type: "note", data: { vel: 2 }, tags: [] };
+    check("player rejects bad velocity",
+      checkMorphState("player.placeNote", st([]), { occ: loud }).length === 1);
+    // Record one toggle, undo it, redo it, save the file, reload it.
+    const extra = { id: "n-live", anchor: { q: 0, r: 3 }, span: [], type: "note", data: { player: "composer", vel: 0.5, pitch: 7 }, tags: [] };
+    const occupants = [...(res.plan.occupants ?? []), extra];
+    const dims = { width: res.plan.width, height: res.plan.height };
+    let past = pushHistory([], { occupants: res.plan.occupants ?? [], ...dims },
+      { name: "player.placeNote", params: { occ: extra }, inverse: { prev: null } });
+    const u = undoHistory(past, [], { occupants, ...dims });
+    check("player undo drops the note",
+      u.undone && !u.state.occupants.some(o => o.id === "n-live"));
+    const r = redoHistory(u.past, u.future, u.state);
+    check("player redo restores the note",
+      r.redone && r.state.occupants.some(o => o.id === "n-live"));
+    past = r.past;
+    const settings = {
+      tilingId: "square8", presetId: "player", ruleSet: data.ruleSet,
+      regions: data.regions, interpretation: data.interpretation, mapping: mappingOf(data.interpretation),
+    };
+    const { plan, checkpointed } = buildPlayerSave({
+      settings, size: { w: res.plan.width, h: res.plan.height },
+      occupants: r.state.occupants, base: res.plan.base, adopted: res.plan.morphs, past,
+    });
+    check("player save needs no checkpoint", !checkpointed);
+    const reloaded = loadPlan({ data: JSON.parse(JSON.stringify(plan)), errors: [] }, null);
+    check("player file reloads", reloaded.ok, reloaded.ok ? "" : reloaded.errors.join("; "));
+    if (reloaded.ok) {
+      check("player mapping survives",
+        (reloaded.plan.interpretation as any)?.sound?.pitchMapping?.baseHz === 220);
+      const last = reloaded.plan.morphs[reloaded.plan.morphs.length - 1];
+      const back = invertMorph(
+        { occupants: reloaded.plan.occupants ?? [], width: reloaded.plan.width, height: reloaded.plan.height }, last);
+      check("reloaded player chain undoes cleanly",
+        back !== null && !back.occupants.some(o => o.id === "n-live"));
+    }
+  }
+}
+
+// 23. Cursor: a second state shape through the same history contract.
+{
+  const path = { cells: [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }] };
+  const base = { occupants: [], width: 3, height: 1, cursor: createCursor(path, { loop: true }) };
+  const seek = { name: "cursor.seekTo", params: { index: 2 }, inverse: { prevIndex: -1, prevFinished: false } };
+  const moved = applyMorph(base, seek);
+  check("seek moves the cursor, not the board", moved.ok && (moved as any).state.cursor.index === 2 &&
+    (moved as any).state.occupants.length === 0 && (moved as any).state.width === 3);
+  if (moved.ok) {
+    const s1 = (moved as any).state;
+    // Grid morphs carry the cursor untouched.
+    const note = { id: "n", anchor: { q: 0, r: 0 }, span: [], type: "note", data: {}, tags: [] };
+    const placed = applyMorph(s1, { name: "player.placeNote", params: { occ: note }, inverse: { prev: null } });
+    check("occupant morphs preserve the cursor", placed.ok && (placed as any).state.cursor.index === 2);
+    // Undo and redo through history restore the exact index.
+    const past = pushHistory([], base, seek);
+    const u = undoHistory(past, [], s1);
+    check("cursor undo restores the index",
+      u.undone && u.state.cursor !== null && u.state.cursor !== undefined && (u.state.cursor as any).index === -1);
+    const r = redoHistory(u.past, u.future, u.state);
+    check("cursor redo re-seeks",
+      r.redone && (r.state.cursor as any).index === 2);
+    // Missing frame falls back to the snapshot, like every morph.
+    const v = undoHistory(
+      [{ snapshot: base, morph: { name: "cursor.seekTo", params: { index: 1 } } }], [], s1);
+    check("cursor without frame restores snapshot",
+      v.undone && (v.state.cursor as any).index === -1);
+  }
+  check("seek beyond the path rejected",
+    checkMorphState("cursor.seekTo", base, { index: 9 }).length === 1);
+  check("seek with no cursor rejected",
+    checkMorphState("cursor.seekTo", { occupants: [], width: 3, height: 1 }, { index: 0 }).length === 1);
+  // Seeks never persist: files carry no cursor, load resets to the start.
+  const data = JSON.parse(readFileSync("apps/player/morph-plans/player.json", "utf8"));
+  const res = loadPlan({ data, errors: [] }, null);
+  check("loaded plans carry no cursor", res.ok && (res.plan.base as any).cursor === undefined);
+}
+
+// 24. Tree: an independent non-Grid vocabulary on the shared contract.
+{
+  check("tree vocabulary registered apart from grid", getMorph("tree.reparent") !== undefined &&
+    getMorph("grid.upsertOccupant") !== undefined &&
+    listMorphs().filter(m => m.name.startsWith("tree.")).length === 3);
+  const root = { id: "root", anchor: { q: 0, r: 0 }, span: [], type: "folder", data: { label: "albums" }, tags: [] };
+  const kid = { id: "vac", anchor: { q: 1, r: 0 }, span: [], type: "folder", data: { label: "vacation", parent: "root" }, tags: [] };
+  const pic = { id: "img", anchor: { q: 2, r: 0 }, span: [], type: "file", data: { label: "beach", parent: "vac" }, tags: [] };
+  const base = { occupants: [], width: 8, height: 8 };
+  const add = (occ: any) => ({ name: "tree.addNode", params: { occ }, inverse: { prev: null } });
+  // Hierarchy invariants reject what grids would accept.
+  const dup = checkMorphState("tree.addNode", { ...base, occupants: [root] }, { occ: root });
+  check("duplicate node rejected", dup.length === 1);
+  const noOrphan = checkMorphState("tree.addNode", base, { occ: kid });
+  check("orphan node rejected", noOrphan.length === 1 && noOrphan[0].includes("not present"));
+  const full = { ...base, occupants: [root, kid, pic] };
+  check("removing a parent with children rejected",
+    checkMorphState("tree.removeNode", full, { id: "vac" }).length === 1);
+  check("reparent cycle rejected",
+    checkMorphState("tree.reparent", full, { id: "root", parent: "vac" }).length === 1);
+  check("reparent to a file rejected",
+    checkMorphState("tree.reparent", full, { id: "vac", parent: "img" }).length === 1);
+  check("self-parent rejected",
+    checkMorphState("tree.reparent", full, { id: "vac", parent: "vac" }).length === 1);
+  const leaf = { ...base, occupants: [root, kid] };
+  check("legal reparent applies",
+    checkMorphState("tree.reparent", full, { id: "img", parent: "root" }).length === 0);
+  // Replay, undo, redo and serialization through the shared contract.
+  const moved = applyMorph(leaf, {
+    name: "tree.reparent", params: { id: "vac", parent: "root" },
+    inverse: { prev: kid },
+  });
+  check("reparent replays", moved.ok);
+  const chain = [add(root), add(kid),
+    { name: "tree.reparent", params: { id: "vac", parent: "root" }, inverse: { prev: { ...kid, data: { ...kid.data } } } }];
+  const past = pushHistory(pushHistory([], base, chain[0]), { ...base, occupants: [root] }, chain[1]);
+  const u = undoHistory(past, [], { ...base, occupants: [root, kid] });
+  check("tree undo removes the node",
+    u.undone && u.state.occupants.length === 1 && u.state.occupants[0].id === "root");
+  const r = redoHistory(u.past, u.future, u.state);
+  check("tree redo restores the node",
+    r.redone && r.state.occupants.length === 2);
+  const text = JSON.stringify(chain);
+  const back = replayMorphs(base, JSON.parse(text));
+  check("tree chain serializes and replays",
+    back.ok && (back as any).state.occupants.length === 2);
+  // A tree plan file loads through the same validated path as grid plans.
+  const file = {
+    $schema: "paramorphic-plan/1",
+    component: "Tree",
+    tilingId: "square8",
+    presetId: "albums",
+    width: 8, height: 8,
+    ruleSet: {
+      id: "albums",
+      setup: { width: 8, height: 8, description: "album tree" },
+      moves: [], turns: { type: "free", order: [], first: "s" },
+      outcomes: [], end: { condition: "none", action: "none" },
+    },
+    occupants: [root, kid],
+    regions: [],
+    base,
+    morphs: [add(root), add(kid)],
+  };
+  const loaded = loadPlan({ data: file, errors: [] }, null);
+  check("tree plan file loads by replay", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

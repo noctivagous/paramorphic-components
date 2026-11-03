@@ -11,7 +11,10 @@
     "verify:replay": "esbuild scripts/verify-morph-replay.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-morph-replay.cjs --log-level=error && node /tmp/verify-morph-replay.cjs",
     "dev:spreadsheet": "vite --config apps/spreadsheet/vite.config.ts",
     "build:spreadsheet": "vite build --config apps/spreadsheet/vite.config.ts",
-    "preview:spreadsheet": "vite preview --config apps/spreadsheet/vite.config.ts"
+    "preview:spreadsheet": "vite preview --config apps/spreadsheet/vite.config.ts",
+    "dev:player": "vite --config apps/player/vite.config.ts",
+    "build:player": "vite build --config apps/player/vite.config.ts",
+    "preview:player": "vite preview --config apps/player/vite.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

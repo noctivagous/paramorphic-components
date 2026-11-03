@@ -90,10 +90,10 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const dims = { width: size.w, height: size.h };
+  const stateOf = (list: Occupant[]) => ({ occupants: list, width: size.w, height: size.h });
 
   const push = (next: Occupant[]) => {
-    setPast(p => pushHistory(p, occupants, diffToMorph(occupants, next)));
+    setPast(p => pushHistory(p, stateOf(occupants), diffToMorph(occupants, next)));
     setFuture([]);
     setOccupantsState(next);
   };
@@ -118,19 +118,19 @@ export default function App() {
   };
 
   const undo = () => {
-    const r = undoHistory(past, future, occupants, dims);
+    const r = undoHistory(past, future, stateOf(occupants));
     if (!r.undone) return;
     setPast(r.past);
     setFuture(r.future);
-    setOccupantsState(r.occupants);
+    setOccupantsState(r.state.occupants);
   };
 
   const redo = () => {
-    const r = redoHistory(past, future, occupants, dims);
+    const r = redoHistory(past, future, stateOf(occupants));
     if (!r.redone) return;
     setPast(r.past);
     setFuture(r.future);
-    setOccupantsState(r.occupants);
+    setOccupantsState(r.state.occupants);
   };
 
   const reloadFile = () =>

@@ -4,15 +4,17 @@
 // inverted the wrong morph. Steps now travel together, which makes that
 // misalignment unrepresentable: every entry holds the pre-step snapshot and
 // the morph that produced the step, or null when no morph covers it.
-// Pure functions, so the shell stays thin and the divergence case is testable.
-import type { Occupant } from "./types";
-import { applyMorph, invertMorph, type AppliedMorph } from "./morphs/registry";
+// Snapshots are whole plan states, not occupant lists: the cursor (or any
+// later state shape) travels with the board, so its morphs undo through the
+// same contract. Pure functions, so the shell stays thin and the divergence
+// case is testable.
+import { applyMorph, invertMorph, type AppliedMorph, type PlanState } from "./morphs/registry";
 
-export type HistoryStep = { snapshot: Occupant[]; morph: AppliedMorph | null };
+export type HistoryStep = { snapshot: PlanState; morph: AppliedMorph | null };
 
 export function pushHistory(
   past: HistoryStep[],
-  snapshot: Occupant[],
+  snapshot: PlanState,
   morph: AppliedMorph | null,
   cap = 50
 ): HistoryStep[] {
@@ -20,7 +22,7 @@ export function pushHistory(
 }
 
 export type UndoOutcome = {
-  occupants: Occupant[];
+  state: PlanState;
   past: HistoryStep[];
   future: HistoryStep[];
   undone: boolean;
@@ -29,14 +31,13 @@ export type UndoOutcome = {
 export function undoHistory(
   past: HistoryStep[],
   future: HistoryStep[],
-  current: Occupant[],
-  dims: { width: number; height: number }
+  current: PlanState
 ): UndoOutcome {
   const top = past[past.length - 1];
-  if (!top) return { occupants: current, past, future, undone: false };
-  const inverted = top.morph ? invertMorph({ occupants: current, ...dims }, top.morph) : null;
+  if (!top) return { state: current, past, future, undone: false };
+  const inverted = top.morph ? invertMorph(current, top.morph) : null;
   return {
-    occupants: inverted ? inverted.occupants : top.snapshot,
+    state: inverted ?? top.snapshot,
     past: past.slice(0, -1),
     future: [{ snapshot: current, morph: top.morph }, ...future].slice(0, 50),
     undone: true,
@@ -44,7 +45,7 @@ export function undoHistory(
 }
 
 export type RedoOutcome = {
-  occupants: Occupant[];
+  state: PlanState;
   past: HistoryStep[];
   future: HistoryStep[];
   redone: boolean;
@@ -53,15 +54,14 @@ export type RedoOutcome = {
 export function redoHistory(
   past: HistoryStep[],
   future: HistoryStep[],
-  current: Occupant[],
-  dims: { width: number; height: number }
+  current: PlanState
 ): RedoOutcome {
   const [top, ...rest] = future;
-  if (!top) return { occupants: current, past, future, redone: false };
-  const res = top.morph ? applyMorph({ occupants: current, ...dims }, top.morph) : null;
+  if (!top) return { state: current, past, future, redone: false };
+  const res = top.morph ? applyMorph(current, top.morph) : null;
   if (res && res.ok) {
     return {
-      occupants: res.state.occupants,
+      state: res.state,
       past: pushHistory(past, current, top.morph),
       future: rest,
       redone: true,
@@ -69,7 +69,7 @@ export function redoHistory(
   }
   // Morph no longer applies (or the step was snapshot-only): restore the snapshot.
   return {
-    occupants: top.snapshot,
+    state: top.snapshot,
     past: pushHistory(past, current, null),
     future: rest,
     redone: true,

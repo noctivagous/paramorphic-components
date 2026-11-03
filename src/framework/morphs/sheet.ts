@@ -4,8 +4,8 @@
 // and reload clear the chain instead: they replace the base, so there is no
 // morph to pop and the snapshot path owns them.
 import type { Occupant } from "../types";
-import { cellsOf, removeOccupant, upsertOccupant } from "../editing";
-import { registerMorph, type MorphContext, type PlanState } from "./registry";
+import { checkPlacement, removeOccupant, upsertOccupant } from "../editing";
+import { needPrevFrame, registerMorph, type MorphContext, type PlanState } from "./registry";
 
 type CellRef = { id: string };
 type SetCellParams = { occ: Occupant };
@@ -20,17 +20,8 @@ function validateOcc(o: unknown): string[] {
   return [];
 }
 
-/**
- * An absent or content-free undo frame is a failure, never a guess: throw so
- * the caller falls back to a snapshot restore. In particular `{}` carries no
- * `prev` key and must not be read as "nothing was there" — that reading can
- * delete a replaced cell.
- */
 function needFrame(undoCtx: unknown, morph: string): { prev?: Occupant | null } {
-  if (!undoCtx || typeof undoCtx !== "object" || !("prev" in (undoCtx as Record<string, unknown>))) {
-    throw new Error(`${morph} has no inverse data; cannot invert`);
-  }
-  return undoCtx as { prev?: Occupant | null };
+  return needPrevFrame<Occupant>(undoCtx, morph);
 }
 
 function capturePrev(state: PlanState, id: string): { prev: Occupant | null } {
@@ -45,22 +36,7 @@ registerMorph<SetCellParams>({
     if (!p || typeof p !== "object") return ["params must be { occ }"];
     return validateOcc((p as SetCellParams).occ);
   },
-  check: (state, p) => {
-    const { q, r } = p.occ.anchor;
-    if (q < 0 || r < 0 || q >= state.width || r >= state.height) {
-      return [`occ "${p.occ.id}" anchor (${q},${r}) is outside ${state.width}x${state.height}`];
-    }
-    const mine = new Set(cellsOf(p.occ).map(c => `${c.q},${c.r}`));
-    for (const other of state.occupants) {
-      if (other.id === p.occ.id) continue;
-      for (const c of cellsOf(other)) {
-        if (mine.has(`${c.q},${c.r}`)) {
-          return [`occ "${p.occ.id}" collides with "${other.id}" at ${c.q},${c.r}`];
-        }
-      }
-    }
-    return [];
-  },
+  check: (state, p) => checkPlacement(state, p.occ),
   capture: (state, p) => capturePrev(state, p.occ.id),
   apply: (state: PlanState, p: SetCellParams) => ({
     ...state,

@@ -28,3 +28,27 @@ export function removeOccupant(occupants: Occupant[], id: string): Occupant[] {
 export function cellsOf(o: Occupant): { q: number; r: number }[] {
   return [o.anchor, ...(o.span || []).map(s => ({ q: o.anchor.q + s.q, r: o.anchor.r + s.r }))];
 }
+
+export type DimState = { width: number; height: number; occupants: Occupant[] };
+
+/**
+ * Shared placement rule for every occupant vocabulary (grid, sheet, player,
+ * tree): the anchor lands inside the board, and no covered cell belongs to a
+ * different occupant. Replacing the same id is fine.
+ */
+export function checkPlacement(state: DimState, o: Occupant): string[] {
+  const { q, r } = o.anchor;
+  if (q < 0 || r < 0 || q >= state.width || r >= state.height) {
+    return [`occ "${o.id}" anchor (${q},${r}) is outside ${state.width}x${state.height}`];
+  }
+  const mine = new Set(cellsOf(o).map(c => `${c.q},${c.r}`));
+  for (const other of state.occupants) {
+    if (other.id === o.id) continue;
+    for (const c of cellsOf(other)) {
+      if (mine.has(`${c.q},${c.r}`)) {
+        return [`occ "${o.id}" collides with "${other.id}" at ${c.q},${c.r}`];
+      }
+    }
+  }
+  return [];
+}
