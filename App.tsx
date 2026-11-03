@@ -12,7 +12,7 @@ import {
   serializePlan,
   validatePlan,
 } from "./src/framework";
-import { STORED_PLANS, getStoredPlan } from "./plans";
+import { STORED_PLANS, getStoredPlan } from "./morph-plans";
 import { SpreadsheetView } from "./src/views/SpreadsheetView";
 import { PlayerView } from "./src/views/PlayerView";
 import { ChatView } from "./src/views/ChatView";

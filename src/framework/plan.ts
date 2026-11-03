@@ -263,7 +263,7 @@ engine: getValidMoves generic using tiling.directionMap + leaps, outcomes evalua
 }
 
 // ---------- Stored plans: load + apply ----------
-// A plan file (plans/*.json) is validated by validatePlan on load and only
+// A plan file (morph-plans/*.json) is validated by validatePlan on load and only
 // then applied. Text pasted in the demo goes through parsePlan first; files
 // skip parsing because JSON import already produced data.
 export type PlanComponent = "Grid" | "Graph" | "Tree" | "Path" | "Protocol" | "Logic" | "Compose";

@@ -23,7 +23,7 @@ Two mappings need no new component:
 
 **Why shaping makes research faster**
 - **Ablations and sweeps are small plan diffs.** An ablation removes one reversible morph, and a sweep varies one morph's parameter.
-- **Plans are validated before running.** This is the direction-name check generalized to shapes, dtypes, region references and device placement. Implemented for stored plans: `loadPlan` enforces tiling membership, direction names, region references and span collisions on every file load (`src/framework/plan.ts`, `plans/` convention in README §9.0).
+- **Plans are validated before running.** This is the direction-name check generalized to shapes, dtypes, region references and device placement. Implemented for stored plans: `loadPlan` enforces tiling membership, direction names, region references and span collisions on every file load (`src/framework/plan.ts`, `morph-plans/` convention in README §9.0).
 - **Provenance comes with the plan.** A plan plus a seed reproduces a run, and introspection shows what changed between two runs.
 - **Hosting covers placement.** Sub-networks are guests, and sharding is regions of a device grid.
 
@@ -41,5 +41,5 @@ morphs:
 
 **Caveat:** config-driven model builders already exist. The value here depends on one substrate and one set of conventions spanning model, data, environment and search, with plans that are executable and validated. The paramorphic layer should orchestrate over PyTorch, JAX or ONNX through the platform-adapter layer, not reimplement autodiff or kernels. First precedent exists: the audio platform adapter sounds traversal hits while framework core never touches `AudioContext` (`src/framework/adapters/audio.ts`).
 
-**Suggested first proof:** one Graph plan that produces an MLP, a CNN and a small transformer on a toy task. Alongside it, a gridworld environment from your existing rule sets, trained with a simple learner on square versus hex tilings. The stored-plan convention (`plans/`, README §9.0) is the artifact shape for this: one validated file per architecture, diffed as plans.
+**Suggested first proof:** one Graph plan that produces an MLP, a CNN and a small transformer on a toy task. Alongside it, a gridworld environment from your existing rule sets, trained with a simple learner on square versus hex tilings. The stored-plan convention (`morph-plans/`, README §9.0) is the artifact shape for this: one validated file per architecture, diffed as plans.
 

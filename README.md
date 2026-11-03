@@ -361,7 +361,7 @@ Requirements carried over from the sources: every morph is reversible or stackab
 
 ### 9.0 Stored plans
 
-An app is a plan file. `plans/` holds one versioned JSON module per app (`plans/sequencer.json` is generated from its preset, never hand-written first), re-exported through `plans/index.ts`. Files use the `serializePlan` JSON shape with complete occupants — the serializer slices occupants to 30 for display, files must not — plus an optional `interpretation` block for app vocabulary such as pitch mappings, which validators ignore. JSON is the only stored format because it is the only lossless one; YAML stays display-only. Every file is validated by `validatePlan` on load (`loadPlan` in `src/framework/plan.ts`) and rejected with the validator's messages before anything is applied, so a stored plan can never produce a broken board. Text pasted in the demo goes through `parsePlan` first; files skip parsing because JSON import already produced data.
+An app is a plan file. `morph-plans/` holds one versioned JSON module per app (`morph-plans/sequencer.json` is generated from its preset, never hand-written first), re-exported through `morph-plans/index.ts`. Files use the `serializePlan` JSON shape with complete occupants — the serializer slices occupants to 30 for display, files must not — plus an optional `interpretation` block for app vocabulary such as pitch mappings, which validators ignore. JSON is the only stored format because it is the only lossless one; YAML stays display-only. Every file is validated by `validatePlan` on load (`loadPlan` in `src/framework/plan.ts`) and rejected with the validator's messages before anything is applied, so a stored plan can never produce a broken board. Text pasted in the demo goes through `parsePlan` first; files skip parsing because JSON import already produced data.
 
 ### 9.1 Runtime layers and AI assembly
 
@@ -456,10 +456,10 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 | Derived data recalculation | Mechanism only: topological order plus cycle detection (`orderForRecalc`, `recomputeDerived`) | `src/framework/derivation.ts` |
 | Spreadsheet formulas (`=A1+B2`, `SUM(A1:A8)`, `AVG`/`MIN`/`MAX`) | Morph-library vocabulary over the derivation mechanism; `A1` addressing and missing-cell-reads-zero are the vocabulary choices | `src/framework/morphs/formulas.ts` |
 | Sounding a traversal | Platform adapter (layer 5): `createToneTrigger` turns frequencies into WebAudio tones; which datum means which pitch is plan data (`PitchMapping`) | `src/framework/adapters/audio.ts` |
-| Stored plans as light modules | Convention (§9.0): one JSON file per app in `plans/`, registry in `plans/index.ts`, validated on load by `loadPlan`, applied by `applyPlan` | `plans/`, `src/framework/plan.ts` |
+| Stored plans as light modules | Convention (§9.0): one JSON file per app in `morph-plans/`, registry in `morph-plans/index.ts`, validated on load by `loadPlan`, applied by `applyPlan` | `morph-plans/`, `src/framework/plan.ts` |
 | Formula recalc with quarantine | Spreadsheet revealed the morph: `applyFormulas` recomputes `data.formula` cells in DAG order into `data.computed`; a cycle quarantines only its cells and dependents (Kahn's algorithm), never the sheet | `src/framework/morphs/formulas.ts` |
 | Framing without transport | Chat revealed the split: the length-prefix codec (`encodeFrame`/`decodeStream`, partial frames buffered) is framework vocabulary; delivery stays a platform adapter, still deferred | `src/framework/morphs/framing.ts` |
-| Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `plans/*.json`, `src/views/` |
+| Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `morph-plans/*.json`, `src/views/` |
 
 Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 
