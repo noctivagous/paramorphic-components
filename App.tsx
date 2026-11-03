@@ -3,13 +3,16 @@ import {
   DirectionCompass,
   GridViewport,
   TILINGS_LIST,
+  applyPlan,
   getTiling,
+  loadPlan,
   makeId,
   parsePlan,
   presetData,
   serializePlan,
   validatePlan,
 } from "./src/framework";
+import { STORED_PLANS, getStoredPlan } from "./plans";
 import type {
   LogicTriple,
   Occupant,
@@ -353,43 +356,46 @@ export default function App() {
     setPlanText(serializePlan({ component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode }));
   }, [component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode]);
 
+  // Shared apply target: plan files and pasted text apply through one path.
+  const planTarget = {
+    setComponent,
+    setTilingId,
+    setPresetId,
+    setRuleSet,
+    setWidth,
+    setHeight,
+    setOccupants,
+    setRegions,
+    setCurrentTurn,
+    setOutcome,
+    setSelectedId,
+    setValidMoves,
+    setPlanErrors,
+    setChainCaptureActive,
+    markPlanLoad: () => { planLoadRef.current = true; },
+  };
+
+  const applyLoaded = (res: ReturnType<typeof loadPlan>) => {
+    if (!res.ok) { setPlanErrors(res.errors); return; }
+    try {
+      applyPlan(res.plan, planTarget);
+    } catch (e: any) {
+      setPlanErrors([`Apply error: ${e.message}`]);
+    }
+  };
+
   const handleLoadPlan = () => {
     const { data, errors, format } = parsePlan(planText);
     setPlanFormat(format);
     if (errors.length > 0) { setPlanErrors(errors); return; }
-    const valErrors = validatePlan(data, tiling);
-    if (valErrors.length > 0) { setPlanErrors(valErrors); return; }
-    // apply. Plan is the source of truth: skip the preset effect so a custom
-    // plan's rules and occupants are not reset when presetId changes.
-    try {
-      planLoadRef.current = true;
-      if (data.component) setComponent(data.component);
-      if (data.tilingId) setTilingId(data.tilingId);
-      setPresetId(data.presetId || "custom");
-      if (data.ruleSet) {
-        setRuleSet(data.ruleSet);
-        if (data.ruleSet.setup) {
-          setWidth(data.ruleSet.setup.width || data.width || width);
-          setHeight(data.ruleSet.setup.height || data.height || height);
-        }
-      }
-      if (data.width) setWidth(data.width);
-      if (data.height) setHeight(data.height);
-      if (data.occupants) setOccupants(data.occupants);
-      if (data.regions) setRegions(data.regions);
-      else if (data.ruleSet?.regions) setRegions(data.ruleSet.regions);
-      if (data.ruleSet?.turns) {
-        const first = (data.ruleSet.turns as any).first || (data.ruleSet.turns as any).order?.[0] || "white";
-        setCurrentTurn(first);
-      }
-      setOutcome(null);
-      setSelectedId(null);
-      setValidMoves([]);
-      setPlanErrors([]);
-      setChainCaptureActive(false);
-    } catch (e: any) {
-      setPlanErrors([`Apply error: ${e.message}`]);
-    }
+    applyLoaded(loadPlan({ data, errors: [] }, tiling, { width, height }));
+  };
+
+  const handleLoadFile = (name: string) => {
+    const data = getStoredPlan(name);
+    if (!data) { setPlanErrors([`Unknown stored plan "${name}"`]); return; }
+    setPlanFormat("json");
+    applyLoaded(loadPlan({ data, errors: [] }, tiling, { width, height }));
   };
 
   const saveConfig = async () => {
@@ -663,6 +669,9 @@ export default function App() {
                 {examplePlans.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
               <button onClick={handleLoadPlan} className="px-3 py-1 rounded-full bg-[var(--accent)] text-black text-[10px] font-bold">LOAD / VALIDATE / REPLAY</button>
+              {STORED_PLANS.map(p => (
+                <button key={p.name} onClick={() => handleLoadFile(p.name)} title={p.label} className="px-3 py-1 rounded-full bg-[var(--bg-3)] border border-[var(--border)] text-[10px]">FILE: {p.name.toUpperCase()}</button>
+              ))}
             </div>
             <textarea value={planText} onChange={e => setPlanText(e.target.value)} className="mt-3 w-full h-[280px] p-2 rounded-[8px] bg-[#0a0b0d] border border-[var(--border)] text-[9px] leading-[1.35] overflow-auto whitespace-pre-wrap break-words font-mono" spellCheck={false} />
             {planErrors.length > 0 && (

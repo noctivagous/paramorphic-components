@@ -359,6 +359,10 @@ Swapping the last two lines for piece-specific move sets turns the same plan int
 
 Requirements carried over from the sources: every morph is reversible or stackable, the runtime can answer what has been morphed so far, and the plan serializes for AI to read and generate. The source says the XML-based Ocelot system is the intended representation, but it is not defined in these notes, so whether plans are written in Ocelot XML or this YAML-style form is an open decision below.
 
+### 9.0 Stored plans
+
+An app is a plan file. `plans/` holds one versioned JSON module per app (`plans/sequencer.json` is generated from its preset, never hand-written first), re-exported through `plans/index.ts`. Files use the `serializePlan` JSON shape with complete occupants — the serializer slices occupants to 30 for display, files must not — plus an optional `interpretation` block for app vocabulary such as pitch mappings, which validators ignore. JSON is the only stored format because it is the only lossless one; YAML stays display-only. Every file is validated by `validatePlan` on load (`loadPlan` in `src/framework/plan.ts`) and rejected with the validator's messages before anything is applied, so a stored plan can never produce a broken board. Text pasted in the demo goes through `parsePlan` first; files skip parsing because JSON import already produced data.
+
 ### 9.1 Runtime layers and AI assembly
 
 If this exists as a runtime or framework, five layers separate what is written once from what is written per app.
@@ -452,6 +456,7 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 | Derived data recalculation | Mechanism only: topological order plus cycle detection (`orderForRecalc`, `recomputeDerived`) | `src/framework/derivation.ts` |
 | Spreadsheet formulas (`=A1+B2`, `SUM(A1:A8)`, `AVG`/`MIN`/`MAX`) | Morph-library vocabulary over the derivation mechanism; `A1` addressing and missing-cell-reads-zero are the vocabulary choices | `src/framework/morphs/formulas.ts` |
 | Sounding a traversal | Platform adapter (layer 5): `createToneTrigger` turns frequencies into WebAudio tones; which datum means which pitch is plan data (`PitchMapping`) | `src/framework/adapters/audio.ts` |
+| Stored plans as light modules | Convention (§9.0): one JSON file per app in `plans/`, registry in `plans/index.ts`, validated on load by `loadPlan`, applied by `applyPlan` | `plans/`, `src/framework/plan.ts` |
 
 Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 

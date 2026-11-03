@@ -261,3 +261,97 @@ engine: getValidMoves generic using tiling.directionMap + leaps, outcomes evalua
       return (yaml);
     }
 }
+
+// ---------- Stored plans: load + apply ----------
+// A plan file (plans/*.json) is validated by validatePlan on load and only
+// then applied. Text pasted in the demo goes through parsePlan first; files
+// skip parsing because JSON import already produced data.
+export type PlanComponent = "Grid" | "Graph" | "Tree" | "Path" | "Protocol" | "Logic" | "Compose";
+
+const KNOWN_COMPONENTS: PlanComponent[] = ["Grid", "Graph", "Tree", "Path", "Protocol", "Logic", "Compose"];
+
+export type LoadedPlan = {
+  component?: PlanComponent;
+  tilingId?: string;
+  presetId: string;
+  ruleSet: RuleSet;
+  width: number;
+  height: number;
+  occupants?: Occupant[];
+  regions?: Region[];
+  firstTurn: string;
+};
+
+export function loadPlan(
+  parsed: { data: any; errors: string[] },
+  tiling: TilingDef | null,
+  fallback?: { width: number; height: number }
+): { ok: true; plan: LoadedPlan } | { ok: false; errors: string[] } {
+  if (parsed.errors.length > 0) return { ok: false, errors: parsed.errors };
+  const data = parsed.data;
+  const errors = validatePlan(data, tiling);
+  if (data?.component && !KNOWN_COMPONENTS.includes(data.component)) {
+    errors.push(`Unknown component "${data.component}" (available: ${KNOWN_COMPONENTS.join(", ")})`);
+  }
+  if (errors.length > 0) return { ok: false, errors };
+  const setup = data.ruleSet?.setup || {};
+  return {
+    ok: true,
+    plan: {
+      component: data.component,
+      tilingId: data.tilingId,
+      presetId: data.presetId || "custom",
+      ruleSet: data.ruleSet,
+      width: setup.width ?? data.width ?? fallback?.width ?? 8,
+      height: setup.height ?? data.height ?? fallback?.height ?? 8,
+      occupants: Array.isArray(data.occupants) ? data.occupants : undefined,
+      regions: Array.isArray(data.regions)
+        ? data.regions
+        : Array.isArray(data.ruleSet?.regions)
+          ? data.ruleSet.regions
+          : undefined,
+      firstTurn:
+        (data.ruleSet?.turns as any)?.first ||
+        (data.ruleSet?.turns as any)?.order?.[0] ||
+        "white",
+    },
+  };
+}
+
+export type PlanApplyTarget = {
+  setComponent: (c: PlanComponent) => void;
+  setTilingId: (t: TilingDef["id"]) => void;
+  setPresetId: (p: string) => void;
+  setRuleSet: (r: RuleSet) => void;
+  setWidth: (w: number) => void;
+  setHeight: (h: number) => void;
+  setOccupants: (o: Occupant[]) => void;
+  setRegions: (r: Region[]) => void;
+  setCurrentTurn: (t: string) => void;
+  setOutcome: (o: null) => void;
+  setSelectedId: (id: string | null) => void;
+  setValidMoves: (m: any[]) => void;
+  setPlanErrors: (e: string[]) => void;
+  setChainCaptureActive: (b: boolean) => void;
+  markPlanLoad: () => void;
+};
+
+export function applyPlan(plan: LoadedPlan, target: PlanApplyTarget): void {
+  // Plan is the source of truth: the caller skips the preset effect so a
+  // custom plan's rules and occupants are not reset when presetId changes.
+  target.markPlanLoad();
+  if (plan.component) target.setComponent(plan.component);
+  if (plan.tilingId) target.setTilingId(plan.tilingId as TilingDef["id"]);
+  target.setPresetId(plan.presetId);
+  target.setRuleSet(plan.ruleSet);
+  target.setWidth(plan.width);
+  target.setHeight(plan.height);
+  if (plan.occupants) target.setOccupants(plan.occupants);
+  if (plan.regions) target.setRegions(plan.regions);
+  target.setCurrentTurn(plan.firstTurn);
+  target.setOutcome(null);
+  target.setSelectedId(null);
+  target.setValidMoves([]);
+  target.setPlanErrors([]);
+  target.setChainCaptureActive(false);
+}
