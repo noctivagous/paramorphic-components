@@ -363,6 +363,20 @@ Requirements carried over from the sources: every morph is reversible or stackab
 
 An app is a plan file. `morph-plans/` holds one versioned JSON module per app (`morph-plans/sequencer.json` is generated from its preset, never hand-written first), re-exported through `morph-plans/index.ts`. Files use the `serializePlan` JSON shape with complete occupants — the serializer slices occupants to 30 for display, files must not — plus an optional `interpretation` block for app vocabulary such as pitch mappings, which validators ignore. JSON is the only stored format because it is the only lossless one; YAML stays display-only. Every file is validated by `validatePlan` on load (`loadPlan` in `src/framework/plan.ts`) and rejected with the validator's messages before anything is applied, so a stored plan can never produce a broken board. Text pasted in the demo goes through `parsePlan` first; files skip parsing because JSON import already produced data.
 
+A real app is a directory with its own plans and its own run commands:
+
+```
+apps/spreadsheet/
+  index.html            # entry; mounts src/main.tsx
+  vite.config.ts        # root is this dir; server.fs.allow reaches the shared src/
+  src/main.tsx          # mounts App, imports shared ../../src/index.css
+  src/App.tsx           # thin shell: menubar, undo history, save/open
+  src/plans.ts          # registry of this app's morph-plans
+  morph-plans/*.json    # the app itself; validated by loadPlan on use
+```
+
+Rules: one app per directory; each app owns its morph-plans; framework and views stay shared by relative import with the shared toolchain — no per-app packaging until an app needs independent versioning. Run with `npm run dev:spreadsheet`, ship with `npm run build:spreadsheet`. Menus, undo history and file save live in the shell; the plan file stays the source of truth, so save writes a morph-plan and open validates it back through `loadPlan`.
+
 ### 9.1 Runtime layers and AI assembly
 
 If this exists as a runtime or framework, five layers separate what is written once from what is written per app.
