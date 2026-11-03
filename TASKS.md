@@ -52,6 +52,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-03 — Reject invalid Tree save state
+
+`chainForTreeSave` now returns validation errors for an invalid current tree instead of producing an unloadable checkpoint. A valid current tree still checkpoints when its chain cannot be replayed. Regression checks cover duplicate, orphaned and malformed state, plus checkpoint reload.
+
 ### 2026-11-03 — Tree loader trust hardening
 
 Follow-up reproductions showed `loadTreePlan` accepting an invalid tree base and a non-array morph chain, and `chainForTreeSave` publishing a chain its own loader rejects (`src/framework/morphs/tree2.ts`). Fixed: new `checkTreeNodes` validates shape, unique ids, live folder parents, and cycles on base and cached snapshots; non-array `morphs` is an error; save publishes whole only when the loader's own checked replay accepts the chain, otherwise checkpoints. `verify:replay` §27 adds 18 checks (149 total) with `typecheck` and all builds green.

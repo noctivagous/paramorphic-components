@@ -726,11 +726,13 @@ for (const f of files) {
   // Save helper publishes full chains and checkpoints partial ones.
   if (loaded.ok) {
     const fullSave = chainForTreeSave(base, (loaded as any).morphs, { nodes: [root, kid] });
-    check("disjoint complete chain saves whole", !fullSave.checkpointed && fullSave.morphs.length === 2);
+    check("disjoint complete chain saves whole", fullSave.ok && !fullSave.checkpointed && fullSave.morphs.length === 2);
     const partial = chainForTreeSave(base, (loaded as any).morphs.slice(1), { nodes: [root, kid] });
-    check("disjoint partial chain checkpoints", partial.checkpointed && partial.morphs.length === 0);
-    const reload = loadTreePlan({ $schema: "paramorphic-plan/1", base: partial.base, morphs: [], nodes: [root, kid] });
-    check("disjoint checkpoint loads", reload.ok);
+    check("disjoint partial chain checkpoints", partial.ok && partial.checkpointed && partial.morphs.length === 0);
+    if (partial.ok) {
+      const reload = loadTreePlan({ $schema: "paramorphic-plan/1", base: partial.base, morphs: [], nodes: [root, kid] });
+      check("disjoint checkpoint loads", reload.ok);
+    }
   }
 }
 
@@ -830,19 +832,28 @@ for (const f of files) {
   check("duplicate chain fails the loader",
     !loadTreePlan({ base: { nodes: [] }, morphs: dupChain } as any).ok);
   const dupSave = chainForTreeSave({ nodes: [] }, dupChain, dupCurrent as any);
-  check("save checkpoints a loader-rejected chain", dupSave.checkpointed && dupSave.morphs.length === 0);
+  check("save rejects duplicate current nodes", !dupSave.ok && dupSave.errors.some(e => e.includes("duplicate")));
   const orphanChain = [add(goodKid)];
   const orphanSave = chainForTreeSave({ nodes: [] }, orphanChain, { nodes: [goodKid] } as any);
-  check("save checkpoints an inapplicable chain", orphanSave.checkpointed && orphanSave.morphs.length === 0);
+  check("save rejects orphan current node", !orphanSave.ok && orphanSave.errors.some(e => e.includes("not present")));
+  const invalidChainSave = chainForTreeSave({ nodes: [] }, orphanChain, { nodes: [goodRoot, goodKid] } as any);
+  check("save checkpoints an inapplicable chain with valid current state", invalidChainSave.ok && invalidChainSave.checkpointed);
+  if (invalidChainSave.ok) {
+    check("valid checkpoint reloads", loadTreePlan({ base: invalidChainSave.base, morphs: invalidChainSave.morphs }).ok);
+  }
+  const malformedSave = chainForTreeSave({ nodes: [] }, [], { nodes: null } as any);
+  check("save rejects malformed current state", !malformedSave.ok && malformedSave.errors.some(e => e.includes("array")));
   // And a clean chain still publishes whole and reloads.
   const cleanChain = [add(goodRoot), add(goodKid)];
   const cleanSave = chainForTreeSave({ nodes: [] }, cleanChain, { nodes: [goodRoot, goodKid] });
-  check("clean disjoint chain still saves whole", !cleanSave.checkpointed && cleanSave.morphs.length === 2);
-  const cleanReload = loadTreePlan({
-    $schema: "paramorphic-plan/1", base: cleanSave.base, morphs: cleanSave.morphs,
-    nodes: [goodRoot, goodKid],
-  } as any);
-  check("saved clean chain reloads", cleanReload.ok, cleanReload.ok ? "" : (cleanReload as any).errors.join("; "));
+  check("clean disjoint chain still saves whole", cleanSave.ok && !cleanSave.checkpointed && cleanSave.morphs.length === 2);
+  if (cleanSave.ok) {
+    const cleanReload = loadTreePlan({
+      $schema: "paramorphic-plan/1", base: cleanSave.base, morphs: cleanSave.morphs,
+      nodes: [goodRoot, goodKid],
+    } as any);
+    check("saved clean chain reloads", cleanReload.ok, cleanReload.ok ? "" : cleanReload.errors.join("; "));
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

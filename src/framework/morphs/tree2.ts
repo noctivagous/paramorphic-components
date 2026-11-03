@@ -217,23 +217,22 @@ export function chainForTreeSave(
   base: TreeState,
   chain: TreePlanFile["morphs"],
   current: TreeState
-): { base: TreeState; morphs: TreePlanFile["morphs"]; checkpointed: boolean } {
+): { ok: true; base: TreeState; morphs: TreePlanFile["morphs"]; checkpointed: boolean } | { ok: false; errors: string[] } {
   // Publish the full chain only when the loader itself would accept it:
   // valid base, array chain, clean param validation, checked replay, and an
-  // exact match. Anything else checkpoints the snapshot instead of shipping
-  // a chain the loader rejects.
+  // exact match. A valid current state can be checkpointed when the chain
+  // fails; an invalid current state must be rejected instead.
   const baseOk =
     !!base && typeof base === "object" && checkTreeNodes((base as TreeState).nodes).length === 0;
-  const currentOk =
-    !!current && typeof current === "object" && checkTreeNodes((current as TreeState).nodes).length === 0;
-  if (baseOk && currentOk && Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0) {
+  const currentErrors = checkTreeNodes(current?.nodes);
+  if (currentErrors.length > 0) {
+    return { ok: false, errors: currentErrors.map(e => `current.${e}`) };
+  }
+  if (baseOk && Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0) {
     const replayed = treeRegistry.replayMorphsChecked(base, chain, {}, cloneTreeState);
     if (replayed.ok && treeNodesEqual(replayed.state, current) === null) {
-      return { base, morphs: chain, checkpointed: false };
+      return { ok: true, base, morphs: chain, checkpointed: false };
     }
   }
-  const nodes = Array.isArray((current as TreeState)?.nodes)
-    ? (current as TreeState).nodes.map(n => ({ ...n }))
-    : [];
-  return { base: { nodes }, morphs: [], checkpointed: true };
+  return { ok: true, base: cloneTreeState(current), morphs: [], checkpointed: true };
 }
