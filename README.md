@@ -114,7 +114,7 @@ Grid defines Occupants, Tree has a “Node Occupant”, and Path has none. One a
 | data | Free-form payload (clip source, piece type, message body). |
 | tags | Grouping and rule targeting (selection groups, effect attachment). |
 | draw | How it renders, if it renders. |
-| hooks | Rule participation: moves, gravity, collision, validation. |
+| hooks | Rule participation: moves, gravity, collision, validation, data edits, derivation. |
 | guest | An optional hosted component, which makes the occupant a host as well (section 8.2). |
 
 Examples from the source: a chess piece is a single-cell occupant, a Tetris block is a multi-cell occupant that rotates and responds to gravity, a Breakout brick is a static multi-cell occupant that disappears when hit, a sequencer note is a toggled cell, and a video clip is a multi-cell occupant with duration.
@@ -128,7 +128,7 @@ Examples from the source: a chess piece is a single-cell occupant, a Tetris bloc
 | Substrate | A tiling of cells (square by default; hex and others by parameter, see 6.1a) with a generic look and behavior. |
 | Occupants | Single- or multi-cell entities: pieces, blocks, notes, clips, cards. |
 | Form parameters | Tiling, dimensions, alternating cell styles (two colors on squares, three on hexes), offsets (QWERTY), non-rectilinear deformation, gutters and headers, viewport clipping, zoom. |
-| Behavior parameters | Selection, drag and drop, toggling, press-to-trigger, gravity, turn order. |
+| Behavior parameters | Selection, drag and drop, toggling, press-to-trigger, gravity, turn order, data editing, traversal triggers. |
 | Rules | Adjacency and movement rules written against the tiling’s neighbor function, snapping (timebase, beats), per-row/column/box constraints (Sudoku), flipping (Othello). |
 | Interpretation | Same grid as calendar, spreadsheet, board, keyboard, timeline, dashboard. |
 | Morph chain | Bare grid, then 8×8, then alternating style, then occupants with move rules, then turn logic, an initial arrangement and win conditions, which gives checkers. Chess shares the grid, occupant and turn kernel and differs in piece types, move sets, setup and end conditions. |
@@ -232,7 +232,7 @@ The Grid/Tree correspondences (cell and node, occupancy and content, adjacency a
 | Behavior parameters | Typing (strong, gradual, probabilistic), temporal and causal links, inference (forward chain, backward chain, SAT solving). |
 | Rules | Cardinalities, type lattice, evaluation strategy, truth maintenance. |
 | Interpretation | Same triples as SQL schema, Prolog knowledge base, rule engine, business process. |
-| Morph chain | triples, type lattice, enforced cardinalities, timestamps, Datalog rules. |
+| Morph chain | triples, type lattice, enforced cardinalities, timestamps, derived facts via the region derivation DAG, Datalog rules. |
 | Applications | Schemas, knowledge bases, rule engines, process flows. |
 
 ## 7. Timeline: where the NLE material goes
@@ -337,6 +337,10 @@ machine:                    # a second graph, linked by reference
 
 The host and guest contract is defined once on the common component interface (substrate, occupants, rules, interpretation, morph plan, slots), so no component implements it differently and Grid is never the only possible container.
 
+### 8.3 Traversal and triggers
+
+A playhead is a cursor over an ordered cell list, not a transport. The framework walks a substrate (`linePath`, `createCursor`, `advanceCursor` in `src/framework/traversal.ts`) and reports which occupants the entered cells hit (`collectTriggers`); time itself lives outside, supplied by whatever ticks the cursor — an interval in a demo, a hardware transport on an instrument. The same operator serves sequencer steps, timeline rulers and path animation. Turning a hit into sound, light or motion is a platform adapter's job (layer 5), driven by plan data such as a pitch mapping — never by core code.
+
 ## 9. The morph plan format
 
 The sources call for a concise declarative language and a runtime that can replay a plan. A morph plan is an ordered list of named morphs applied to a component. Illustrative sketch only, not final syntax:
@@ -362,7 +366,7 @@ If this exists as a runtime or framework, five layers separate what is written o
 | Layer | Contents | Who works here |
 | --- | --- | --- |
 | Apps | Plans, plus the few custom pieces left over | Programmer or AI |
-| Morph library | Stock morphs and rule sets: move rules, end conditions, snapping, typing, framing | Library authors, tested once |
+| Morph library | Stock morphs and rule sets: move rules, end conditions, snapping, typing, framing, formula vocabulary, pitch mappings | Library authors, tested once |
 | Components | Grid, Graph, Tree, Path, Protocol, Logic | Framework |
 | Kernel conventions | Frames, addresses, regions, layers, slots, events, scope (section 8) | Framework |
 | Platform adapters | Rendering, input, storage, network | One per target platform |
@@ -436,6 +440,20 @@ Measures for every step: share of code shared across apps, size of each plan ver
 | The flat-top hex reused the pointy-top direction names | 2 | Direction names belong to the tiling (section 6.1a) |
 | Span and guest went unused, so multi-cell occupants were untested | 1 | Validation needs a multi-cell case such as Tetris or sequencer notes |
 | Graph, Tree, Path, Protocol, Logic and composition were illustrative mockups, and plans were export-only | 3 to 5 | Not started. A plan must load, validate and run to test section 9.1 |
+
+### 11.2 Generic additions implemented
+
+The missing demo capabilities from §11.1 were added as mechanism, never as app-shaped components. The line held throughout: mechanism in framework, vocabulary in plans.
+
+| Addition | Generic home | Files |
+| --- | --- | --- |
+| Substrate traversal (playhead cursor, trigger hits) | Kernel convention (§8.3): ordered walk plus `collectTriggers`; time supplied by the caller | `src/framework/traversal.ts` |
+| Occupant data editing | Behavior morph alongside toggling: immutable `updateOccupantData` / `upsertOccupant` / `removeOccupant` | `src/framework/editing.ts` |
+| Derived data recalculation | Mechanism only: topological order plus cycle detection (`orderForRecalc`, `recomputeDerived`) | `src/framework/derivation.ts` |
+| Spreadsheet formulas (`=A1+B2`, `SUM(A1:A8)`, `AVG`/`MIN`/`MAX`) | Morph-library vocabulary over the derivation mechanism; `A1` addressing and missing-cell-reads-zero are the vocabulary choices | `src/framework/morphs/formulas.ts` |
+| Sounding a traversal | Platform adapter (layer 5): `createToneTrigger` turns frequencies into WebAudio tones; which datum means which pitch is plan data (`PitchMapping`) | `src/framework/adapters/audio.ts` |
+
+Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 
 ## 12. Source cleanup checklist
 
