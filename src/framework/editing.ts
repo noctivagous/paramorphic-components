@@ -23,3 +23,8 @@ export function upsertOccupant(occupants: Occupant[], occ: Occupant): Occupant[]
 export function removeOccupant(occupants: Occupant[], id: string): Occupant[] {
   return occupants.filter(o => o.id !== id);
 }
+
+/** Every cell an occupant covers: its anchor plus its span offsets. */
+export function cellsOf(o: Occupant): { q: number; r: number }[] {
+  return [o.anchor, ...(o.span || []).map(s => ({ q: o.anchor.q + s.q, r: o.anchor.r + s.r }))];
+}

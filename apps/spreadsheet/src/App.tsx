@@ -3,11 +3,20 @@
 // loadPlan, so a corrupt file can never become a broken board.
 import React, { useRef, useState } from "react";
 import { SpreadsheetView } from "../../../src/views/SpreadsheetView";
-import { chainForSave, loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
+import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
 import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
 import { PLANS } from "./plans";
+import { buildSheetSave, type SheetSettings } from "./save";
 
 const seed = PLANS[0].data as any;
+
+const seedSettings: SheetSettings = {
+  tilingId: seed.tilingId,
+  presetId: seed.presetId,
+  ruleSet: seed.ruleSet,
+  regions: seed.regions,
+  interpretation: seed.interpretation,
+};
 
 // Boot through the same validated replay path as file open, so startup
 // constructs the sheet from the stored base + morph chain — never by
@@ -20,6 +29,15 @@ const bootBase: PlanBase = bootPlan?.base ?? {
   width: seed.width as number,
   height: seed.height as number,
 };
+const bootSettings: SheetSettings = bootPlan
+  ? {
+      tilingId: bootPlan.tilingId ?? seed.tilingId,
+      presetId: bootPlan.presetId,
+      ruleSet: bootPlan.ruleSet,
+      regions: bootPlan.regions ?? seed.regions,
+      interpretation: bootPlan.interpretation,
+    }
+  : seedSettings;
 
 /**
  * Describe one view commit as the morph that produced it, capturing the
@@ -65,6 +83,10 @@ export default function App() {
   // every undoable step carries its own snapshot and morph together.
   const [base, setBase] = useState<PlanBase>(() => bootBase);
   const [adopted, setAdopted] = useState<AppliedMorph[]>(() => bootPlan?.morphs ?? []);
+  // The opened file's settings travel with the session: save writes these,
+  // never the seed's, so an opened plan round-trips its rules, tiling and
+  // interpretation.
+  const [settings, setSettings] = useState<SheetSettings>(() => bootSettings);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -76,11 +98,19 @@ export default function App() {
     setOccupantsState(next);
   };
 
-  const reset = (next: Occupant[], w: number, h: number, nextBase: PlanBase, morphs: AppliedMorph[]) => {
+  const reset = (
+    next: Occupant[],
+    w: number,
+    h: number,
+    nextBase: PlanBase,
+    morphs: AppliedMorph[],
+    nextSettings: SheetSettings
+  ) => {
     setPast([]);
     setFuture([]);
     setBase(nextBase);
     setAdopted(morphs);
+    setSettings(nextSettings);
     setOccupantsState(next);
     setSize({ w, h });
     setErrors([]);
@@ -104,16 +134,14 @@ export default function App() {
   };
 
   const reloadFile = () =>
-    reset(bootPlan?.occupants ?? seed.occupants, (bootPlan?.width ?? seed.width) as number, (bootPlan?.height ?? seed.height) as number, bootBase, bootPlan?.morphs ?? []);
+    reset(bootPlan?.occupants ?? seed.occupants, (bootPlan?.width ?? seed.width) as number, (bootPlan?.height ?? seed.height) as number, bootBase, bootPlan?.morphs ?? [], bootSettings);
 
   const save = () => {
-    const stepped = past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
-    // Self-verifying save: publish the full chain only when it still
-    // reconstructs the sheet. A truncated history or a snapshot-only gap
-    // collapses to an honest checkpoint instead of a partial chain.
-    const saved = chainForSave(base, [...adopted, ...stepped], occupants, size.w, size.h);
-    if (saved.checkpointed) {
-      setBase(saved.base);
+    // Settings come from the opened file; the chain is verified before
+    // publishing, collapsing to an honest checkpoint when truncated.
+    const { plan, checkpointed } = buildSheetSave({ settings, size, occupants, base, adopted, past });
+    if (checkpointed) {
+      setBase(plan.base);
       setAdopted([]);
       setPast([]);
       setFuture([]);
@@ -121,22 +149,6 @@ export default function App() {
     } else {
       setNotice(null);
     }
-    const plan = {
-      $schema: "paramorphic-plan/1",
-      component: "Grid",
-      tilingId: seed.tilingId,
-      presetId: seed.presetId,
-      width: size.w,
-      height: size.h,
-      ruleSet: seed.ruleSet,
-      occupants,
-      regions: seed.regions,
-      turns: seed.ruleSet.turns,
-      outcomes: seed.ruleSet.outcomes,
-      interpretation: seed.interpretation,
-      base: saved.base,
-      morphs: saved.morphs,
-    };
     const blob = new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -157,7 +169,20 @@ export default function App() {
         setErrors(res.errors);
         return;
       }
-      reset(res.plan.occupants ?? [], res.plan.width, res.plan.height, res.plan.base, res.plan.morphs);
+      reset(
+        res.plan.occupants ?? [],
+        res.plan.width,
+        res.plan.height,
+        res.plan.base,
+        res.plan.morphs,
+        {
+          tilingId: res.plan.tilingId ?? seed.tilingId,
+          presetId: res.plan.presetId,
+          ruleSet: res.plan.ruleSet,
+          regions: res.plan.regions ?? seed.regions,
+          interpretation: res.plan.interpretation,
+        }
+      );
     } catch (e: any) {
       setErrors([`Open error: ${e?.message ?? e}`]);
     }

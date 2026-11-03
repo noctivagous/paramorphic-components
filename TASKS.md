@@ -90,6 +90,23 @@ verify:replay` grew from 23 to 52 checks covering every §2 path, with
 script covers plan loading, morph application/inversion and history, but not
 traversal, tilings or game rules.
 
+### 2026-11-03 — §2 gaps closed after review
+
+A review reproduced five holes; all are fixed and tested. Load now uses checked
+replay (`replayMorphsChecked`: bounds, presence, collisions per step), validates
+the final board (`checkBoard`), verifies base/cache even for empty chains, pins
+`$schema` to `paramorphic-plan/1`, and reports malformed bases as errors without
+throwing. Undo treats a content-free `{}` frame as missing (snapshot fallback,
+never a guessed delete). Chain surgery and plan load re-derive inverse frames
+from the replay (`capture` + `recaptureFrames`), so undo after surgery restores
+what actually occurred. Spreadsheet save carries the opened file's settings via
+the pure `buildSheetSave` helper (`apps/spreadsheet/src/save.ts`), which the
+verify script drives through complete save/reload round trips for the clean,
+truncated and branched cases. `npm run verify:replay` stands at 72 checks with
+`typecheck`, `build` and `build:spreadsheet` green; all seven §2 boxes are
+checked again. Known limit, kept as-is: discovering applicable morphs still
+requires callers to supply candidate parameters.
+
 ## Decisions to resolve with evidence
 
 - [ ] Decide the public role of Graph, the runtime packaging model, and whether Ocelot XML is needed for interchange. Keep JSON as the stored format until a different decision is supported.

@@ -1,6 +1,7 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
-import { replayMorphs, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
+import { recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
+import { cellsOf } from "./editing";
 
 // ---------- Plan parsing & validation ----------
 export function parsePlan(text: string): { data: any; errors: string[]; format: "json" | "yaml" | "xml" } {
@@ -339,12 +340,16 @@ function readBase(data: any, width: number, height: number): { base: PlanBase; e
   if (typeof raw.width !== "number" || typeof raw.height !== "number") {
     errors.push("plan.base needs numeric width and height");
   }
-  (raw.occupants ?? []).forEach((o: Occupant, i: number) => {
-    if (!o || typeof o.id !== "string" || !o.id) errors.push(`plan.base.occupants[${i}] missing id`);
-    if (!o?.anchor || typeof o.anchor.q !== "number" || typeof o.anchor.r !== "number") {
-      errors.push(`plan.base.occupants[${i}] needs a numeric anchor {q,r}`);
-    }
-  });
+  // Guarded by the Array check above: a non-array occupants value is an
+  // error, never a throw.
+  if (Array.isArray(raw.occupants)) {
+    raw.occupants.forEach((o: Occupant, i: number) => {
+      if (!o || typeof o.id !== "string" || !o.id) errors.push(`plan.base.occupants[${i}] missing id`);
+      if (!o?.anchor || typeof o.anchor.q !== "number" || typeof o.anchor.r !== "number") {
+        errors.push(`plan.base.occupants[${i}] needs a numeric anchor {q,r}`);
+      }
+    });
+  }
   return {
     base: {
       occupants: Array.isArray(raw.occupants) ? raw.occupants : [],
@@ -355,6 +360,40 @@ function readBase(data: any, width: number, height: number): { base: PlanBase; e
   };
 }
 
+/**
+ * Final-board validation: every occupant needs a numeric in-bounds anchor,
+ * and no two occupants may cover the same cell. Runs on the state load will
+ * actually apply, whichever path produced it.
+ */
+function checkBoard(occupants: Occupant[], width: number, height: number): string[] {
+  const errors: string[] = [];
+  const seen = new Map<string, string>();
+  occupants.forEach((o, i) => {
+    if (!o || typeof o.id !== "string" || !o.id) {
+      errors.push(`occupants[${i}] missing id`);
+      return;
+    }
+    if (!o.anchor || typeof o.anchor.q !== "number" || typeof o.anchor.r !== "number") {
+      errors.push(`occupants[${i}] needs a numeric anchor {q,r}`);
+      return;
+    }
+    if (o.anchor.q < 0 || o.anchor.r < 0 || o.anchor.q >= width || o.anchor.r >= height) {
+      errors.push(`occupant "${o.id}" anchor (${o.anchor.q},${o.anchor.r}) is outside ${width}x${height}`);
+    }
+    for (const c of cellsOf(o)) {
+      const key = `${c.q},${c.r}`;
+      if (seen.has(key)) {
+        errors.push(`collision: occupants "${seen.get(key)}" and "${o.id}" both occupy ${key}`);
+      } else {
+        seen.set(key, o.id);
+      }
+    }
+  });
+  return errors;
+}
+
+export const PLAN_SCHEMA = "paramorphic-plan/1";
+
 export function loadPlan(
   parsed: { data: any; errors: string[] },
   tiling: TilingDef | null,
@@ -363,6 +402,9 @@ export function loadPlan(
   if (parsed.errors.length > 0) return { ok: false, errors: parsed.errors };
   const data = parsed.data;
   const errors = validatePlan(data, tiling);
+  if (data?.$schema !== undefined && data.$schema !== PLAN_SCHEMA) {
+    errors.push(`unsupported plan version "${data.$schema}" (this runtime reads ${PLAN_SCHEMA})`);
+  }
   if (data?.component && !KNOWN_COMPONENTS.includes(data.component)) {
     errors.push(`Unknown component "${data.component}" (available: ${KNOWN_COMPONENTS.join(", ")})`);
   }
@@ -377,15 +419,18 @@ export function loadPlan(
   const { base, errors: baseErrors } = readBase(data, width, height);
   for (const e of baseErrors) errors.push(e);
   if (errors.length > 0) return { ok: false, errors };
-  const morphs: AppliedMorph[] = Array.isArray(data.morphs) ? data.morphs : [];
+  let morphs: AppliedMorph[] = Array.isArray(data.morphs) ? data.morphs : [];
   let occupants: Occupant[] | undefined = Array.isArray(data.occupants) ? data.occupants : undefined;
   let outWidth = width;
   let outHeight = height;
-  if (morphs.length > 0) {
-    // The chain constructs the app: replay base + morphs and require the
-    // result to match the cached snapshot. A mismatch is a hard error —
-    // the plan is never partially applied.
-    const replayed = replayMorphs(base, morphs, { tilingId: data.tilingId });
+  // Any stored chain — even an empty one over an explicit base — must
+  // reconstruct the cached snapshot. Snapshot-only files (no base, no
+  // morphs) skip this: the snapshot is the base.
+  if (data.morphs !== undefined || data.base !== undefined) {
+    // The chain constructs the app: checked replay against each
+    // intermediate state, then comparison with the cached snapshot. A
+    // mismatch is a hard error — the plan is never partially applied.
+    const replayed = replayMorphsChecked(base, morphs, { tilingId: data.tilingId });
     if (!replayed.ok) return { ok: false, errors: replayed.errors };
     if (!occupants) {
       occupants = replayed.state.occupants;
@@ -399,7 +444,14 @@ export function loadPlan(
       outWidth = replayed.state.width;
       outHeight = replayed.state.height;
     }
+    // Re-derive inverse frames from the replay so undoing the loaded chain
+    // restores the states that actually occurred, not hand-written ones.
+    morphs = recaptureFrames(base, morphs, { tilingId: data.tilingId });
   }
+  if (occupants) {
+    for (const e of checkBoard(occupants, outWidth, outHeight)) errors.push(e);
+  }
+  if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
     plan: {

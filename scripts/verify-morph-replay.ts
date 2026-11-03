@@ -14,6 +14,7 @@ import {
   replayMorphs,
 } from "../src/framework/morphs/registry";
 import { pushHistory, redoHistory, undoHistory } from "../src/framework/history";
+import { buildSheetSave } from "../apps/spreadsheet/src/save";
 import "../src/framework/morphs/sheet";
 import "../src/framework/morphs/grid";
 
@@ -287,6 +288,193 @@ for (const f of files) {
       errors: [],
     }, null);
     check("checkpoint file loads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
+  }
+}
+
+// 16. Load rejects out-of-bounds and colliding chains, not just bad params.
+{
+  const base = { occupants: [], width: 5, height: 4 };
+  const seed = JSON.parse(readFileSync(files[0].path, "utf8"));
+  const far = { id: "far", anchor: { q: 99, r: 0 }, span: [], type: "cell", data: {}, tags: [] };
+  const r1 = loadPlan({
+    data: { ...seed, base, morphs: [{ name: "sheet.setCell", params: { occ: far }, inverse: { prev: null } }], occupants: [far] },
+    errors: [],
+  }, null);
+  check("out-of-bounds chain rejected", !r1.ok, r1.ok ? "loaded a cell at (99,0)" : "");
+  const a = { id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: {}, tags: [] };
+  const b = { id: "b", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: {}, tags: [] };
+  const mk = (occ: any) => ({ name: "sheet.setCell", params: { occ }, inverse: { prev: null } });
+  const r2 = loadPlan({
+    data: { ...seed, base, morphs: [mk(a), mk(b)], occupants: [a, b] },
+    errors: [],
+  }, null);
+  check("colliding chain rejected", !r2.ok, r2.ok ? "loaded two occupants in one cell" : "");
+  // An empty chain over an explicit base is still verified against the cache.
+  const r3 = loadPlan({
+    data: { ...seed, base, morphs: [], occupants: [a] },
+    errors: [],
+  }, null);
+  check("empty chain bypass rejected", !r3.ok, r3.ok ? "base/cache mismatch accepted" : "");
+}
+
+// 17. The versioned contract is enforced and malformed bases never throw.
+{
+  const seed = JSON.parse(readFileSync(files[0].path, "utf8"));
+  const r1 = loadPlan({ data: { ...seed, $schema: "paramorphic-plan/999" }, errors: [] }, null);
+  check("unknown schema version rejected", !r1.ok, r1.ok ? "future version loaded" : "");
+  let threw = false;
+  let r2: any = null;
+  try {
+    r2 = loadPlan({ data: { ...seed, base: { occupants: 42, width: "wide", height: null } }, errors: [] }, null);
+  } catch {
+    threw = true;
+  }
+  check("malformed base returns errors, never throws", !threw && r2 && !r2.ok, threw ? "threw" : "loaded");
+}
+
+// 18. A content-free inverse frame falls back instead of deleting.
+{
+  const dims = { width: 5, height: 4 };
+  const prev = { id: "c", anchor: { q: 1, r: 1 }, span: [], type: "cell", data: { value: 1 }, tags: [] };
+  const next = { id: "c", anchor: { q: 1, r: 1 }, span: [], type: "cell", data: { value: 2 }, tags: [] };
+  const inverted = invertMorph({ occupants: [next], ...dims },
+    { name: "sheet.setCell", params: { occ: next }, inverse: {} });
+  check("empty frame inverts to fallback", inverted === null);
+  const u = undoHistory(
+    [{ snapshot: [prev], morph: { name: "sheet.setCell", params: { occ: next }, inverse: {} } }],
+    [], [next], dims);
+  check("empty frame undoes to snapshot", u.undone && JSON.stringify(u.occupants) === JSON.stringify([prev]),
+    JSON.stringify(u.occupants));
+}
+
+// 19. Chain surgery refreshes later frames: no ghost restores on undo.
+{
+  const base = { occupants: [], width: 5, height: 4 };
+  const v1 = { id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 1 }, tags: [] };
+  const v2 = { id: "a", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 2 }, tags: [] };
+  const chain = [
+    { name: "sheet.setCell", params: { occ: v1 }, inverse: { prev: null } },
+    { name: "sheet.setCell", params: { occ: v2 }, inverse: { prev: v1 } },
+  ];
+  const edited = removeMorphAt(base, chain, 0);
+  check("surgery replays", edited.ok, edited.ok ? "" : edited.errors.join("; "));
+  if (edited.ok) {
+    const frame = (edited.chain[0] as any).inverse;
+    check("surgery recaptures the later frame", frame && frame.prev === null, JSON.stringify(frame));
+    const undone = invertMorph(edited.state, edited.chain[0]);
+    check("undo after surgery removes, not resurrects",
+      undone !== null && undone.occupants.length === 0, JSON.stringify(undone?.occupants));
+  }
+}
+
+// 20. Complete save/reload round trip preserves the opened file's settings.
+{
+  const seed = JSON.parse(readFileSync(files[0].path, "utf8"));
+  const opened = loadPlan({ data: seed, errors: [] }, null);
+  if (!opened.ok) {
+    check("round-trip setup loads", false, opened.errors.join("; "));
+  } else {
+    const settings = {
+      tilingId: "square8",
+      presetId: "custom-fork",
+      ruleSet: { ...seed.ruleSet, id: "custom-fork" },
+      regions: seed.regions,
+      interpretation: { view: "sheet", note: "opened elsewhere" },
+    };
+    const size = { w: opened.plan.width, h: opened.plan.height };
+    const extra = { id: "c-3-3", anchor: { q: 3, r: 3 }, span: [], type: "cell", data: { value: 3 }, tags: [] };
+    const occupants = [...(opened.plan.occupants ?? []), extra];
+    const past = pushHistory([], opened.plan.occupants ?? [],
+      { name: "sheet.setCell", params: { occ: extra }, inverse: { prev: null } });
+    const { plan, checkpointed } = buildSheetSave({
+      settings, size, occupants, base: opened.plan.base, adopted: opened.plan.morphs, past,
+    });
+    check("clean save needs no checkpoint", !checkpointed);
+    const savedText = JSON.stringify(plan);
+    const reloaded = loadPlan({ data: JSON.parse(savedText), errors: [] }, null);
+    check("saved file reloads", reloaded.ok, reloaded.ok ? "" : reloaded.errors.join("; "));
+    if (reloaded.ok) {
+      check("settings survive the round trip",
+        reloaded.plan.presetId === "custom-fork" &&
+        (reloaded.plan.interpretation as any)?.note === "opened elsewhere" &&
+        reloaded.plan.ruleSet.id === "custom-fork",
+        reloaded.plan.presetId);
+      check("edits survive the round trip",
+        (reloaded.plan.occupants ?? []).some(o => o.id === "c-3-3"));
+      // And undoing the reloaded chain restores the pre-edit board.
+      const last = reloaded.plan.morphs[reloaded.plan.morphs.length - 1];
+      const undone = invertMorph(
+        { occupants: reloaded.plan.occupants ?? [], width: reloaded.plan.width, height: reloaded.plan.height },
+        last);
+      check("reloaded chain undoes cleanly",
+        undone !== null && !undone.occupants.some(o => o.id === "c-3-3"));
+    }
+  }
+}
+
+// 21. Truncation and branching round-trip through real save files.
+{
+  // Own 8x8 board with distinct cells, so nothing collides by construction.
+  const settings = {
+    tilingId: "square8",
+    presetId: "trunc",
+    ruleSet: {
+      id: "trunc",
+      setup: { width: 8, height: 8, description: "truncation board" },
+      moves: [],
+      turns: { type: "free", order: [], first: "s" },
+      outcomes: [],
+      end: { condition: "none", action: "none" },
+    },
+    regions: [],
+    interpretation: null,
+  };
+  const size = { w: 8, h: 8 };
+  const dims = { width: 8, height: 8 };
+  const base = { occupants: [], width: 8, height: 8 };
+  // 55 single-cell writes against the 50-cap: the first 5 steps fall off,
+  // so no saved chain can reconstruct the board from the base.
+  let past: ReturnType<typeof pushHistory> = [];
+  let cur: any[] = [];
+  for (let i = 0; i < 55; i++) {
+    const cell = {
+      id: `t-${i}`,
+      anchor: { q: i % 8, r: Math.floor(i / 8) },
+      span: [], type: "cell", data: { value: i }, tags: [],
+    };
+    const before = cur;
+    past = pushHistory(past, before,
+      { name: "sheet.setCell", params: { occ: cell }, inverse: { prev: null } });
+    cur = [...cur, cell];
+  }
+  const { plan, checkpointed } = buildSheetSave({
+    settings, size, occupants: cur, base, adopted: [], past,
+  });
+  check("truncated save checkpoints", checkpointed);
+  const reloaded = loadPlan({ data: JSON.parse(JSON.stringify(plan)), errors: [] }, null);
+  check("truncated save reloads whole", reloaded.ok &&
+    JSON.stringify((reloaded.plan.occupants ?? []).map(o => o.id).sort()) ===
+    JSON.stringify(cur.map(o => o.id).sort()),
+    reloaded.ok ? "" : reloaded.errors.join("; "));
+  // Branching: undo the last write, store a different value in its cell,
+  // save through the same helper, reload.
+  const u = undoHistory(past, [], cur, dims);
+  check("branch undo drops t-54", u.undone && !u.occupants.some(o => o.id === "t-54"));
+  const branchedCell = {
+    id: "t-54", anchor: { q: 54 % 8, r: Math.floor(54 / 8) },
+    span: [], type: "cell", data: { value: "branch" }, tags: [],
+  };
+  const branchedOcc = [...u.occupants, branchedCell];
+  const branchedPast = pushHistory(u.past, u.occupants,
+    { name: "sheet.setCell", params: { occ: branchedCell }, inverse: { prev: null } });
+  const bSaved = buildSheetSave({
+    settings, size, occupants: branchedOcc, base, adopted: [], past: branchedPast,
+  });
+  const bReloaded = loadPlan({ data: JSON.parse(JSON.stringify(bSaved.plan)), errors: [] }, null);
+  check("branched save reloads", bReloaded.ok, bReloaded.ok ? "" : bReloaded.errors.join("; "));
+  if (bReloaded.ok) {
+    const found = (bReloaded.plan.occupants ?? []).find(o => o.id === "t-54");
+    check("branch value survives", (found?.data as any)?.value === "branch", JSON.stringify(found?.data));
   }
 }
 

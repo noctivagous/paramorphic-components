@@ -32,6 +32,13 @@ export type MorphDef<P = unknown> = {
    * once validated.
    */
   check?: (state: PlanState, params: P, ctx: MorphContext) => string[];
+  /**
+   * Capture the inverse frame for applying these params to this state, so a
+   * later undo restores exactly the pre-step sub-state. Used to re-derive
+   * frames after chain surgery and on plan load, where stored frames may be
+   * stale or hand-written. Absent means frames cannot be re-derived.
+   */
+  capture?: (state: PlanState, params: P) => unknown;
   apply: (state: PlanState, params: P) => PlanState;
   /**
    * Only called when invertible. undoCtx is AppliedMorph.inverse. Throw when
@@ -164,11 +171,15 @@ export function checkMorphState(
   return errors;
 }
 
-/** Replay with per-step state checks, for edits that rewrite the chain. */
-function replayChecked(
+/**
+ * Replay with per-step state checks: each step must validate AND apply to
+ * the exact intermediate state. This is the load path — ordinary replay
+ * without checks is not sufficient to accept a stored chain.
+ */
+export function replayMorphsChecked(
   base: PlanState,
   chain: AppliedMorph[],
-  ctx: MorphContext
+  ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
   let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
   for (let i = 0; i < chain.length; i++) {
@@ -181,6 +192,42 @@ function replayChecked(
     state = def.apply(state, chain[i].params);
   }
   return { ok: true, state };
+}
+
+/**
+ * Re-derive every step's inverse frame by walking the chain from the base.
+ * After surgery (or on load, where frames may be hand-written), a stored
+ * frame can describe a pre-step state that no longer occurs — and undo would
+ * silently restore it. Steps whose morph cannot capture drop their frame so
+ * undo falls back to the snapshot instead of trusting a stale one.
+ */
+export function recaptureFrames(
+  base: PlanState,
+  chain: AppliedMorph[],
+  _ctx: MorphContext = {}
+): AppliedMorph[] {
+  let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
+  return chain.map((m) => {
+    const def = REGISTRY.get(m.name);
+    let inverse: unknown = undefined;
+    if (def?.capture) {
+      try {
+        inverse = def.capture(state, m.params);
+      } catch {
+        inverse = undefined;
+      }
+    } else if (!def) {
+      inverse = m.inverse;
+    }
+    if (def) {
+      try {
+        state = def.apply(state, m.params);
+      } catch {
+        // Leave the state as-is; the checked replay reports the failure.
+      }
+    }
+    return { ...m, inverse };
+  });
 }
 
 /**
@@ -198,8 +245,8 @@ export function removeMorphAt(
   if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
     return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
   }
-  const next = chain.filter((_, i) => i !== index);
-  const replayed = replayChecked(base, next, ctx);
+  const next = recaptureFrames(base, chain.filter((_, i) => i !== index), ctx);
+  const replayed = replayMorphsChecked(base, next, ctx);
   if (!replayed.ok) {
     return {
       ok: false,
@@ -229,8 +276,8 @@ export function replaceMorphAt(
   if (!REGISTRY.get(replacement.name)) {
     return { ok: false, errors: [`unknown morph "${replacement.name}"`] };
   }
-  const next = chain.map((m, i) => (i === index ? replacement : m));
-  const replayed = replayChecked(base, next, ctx);
+  const next = recaptureFrames(base, chain.map((m, i) => (i === index ? replacement : m)), ctx);
+  const replayed = replayMorphsChecked(base, next, ctx);
   if (!replayed.ok) {
     return {
       ok: false,
