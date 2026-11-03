@@ -457,6 +457,9 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 | Spreadsheet formulas (`=A1+B2`, `SUM(A1:A8)`, `AVG`/`MIN`/`MAX`) | Morph-library vocabulary over the derivation mechanism; `A1` addressing and missing-cell-reads-zero are the vocabulary choices | `src/framework/morphs/formulas.ts` |
 | Sounding a traversal | Platform adapter (layer 5): `createToneTrigger` turns frequencies into WebAudio tones; which datum means which pitch is plan data (`PitchMapping`) | `src/framework/adapters/audio.ts` |
 | Stored plans as light modules | Convention (§9.0): one JSON file per app in `plans/`, registry in `plans/index.ts`, validated on load by `loadPlan`, applied by `applyPlan` | `plans/`, `src/framework/plan.ts` |
+| Formula recalc with quarantine | Spreadsheet revealed the morph: `applyFormulas` recomputes `data.formula` cells in DAG order into `data.computed`; a cycle quarantines only its cells and dependents (Kahn's algorithm), never the sheet | `src/framework/morphs/formulas.ts` |
+| Framing without transport | Chat revealed the split: the length-prefix codec (`encodeFrame`/`decodeStream`, partial frames buffered) is framework vocabulary; delivery stays a platform adapter, still deferred | `src/framework/morphs/framing.ts` |
+| Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `plans/*.json`, `src/views/` |
 
 Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 
