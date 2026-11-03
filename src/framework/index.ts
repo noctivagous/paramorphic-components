@@ -15,6 +15,7 @@ export * from "./derivation";
 export * from "./morphs/formulas";
 export * from "./morphs/framing";
 export * from "./morphs/registry";
+export * from "./history";
 import "./morphs/sheet";
 export * from "./adapters/audio";
 export { DirectionCompass, GridViewport } from "./components/GridViewport";

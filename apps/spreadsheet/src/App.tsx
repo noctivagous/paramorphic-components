@@ -3,8 +3,8 @@
 // loadPlan, so a corrupt file can never become a broken board.
 import React, { useRef, useState } from "react";
 import { SpreadsheetView } from "../../../src/views/SpreadsheetView";
-import { applyMorph, invertMorph, loadPlan, parsePlan } from "../../../src/framework";
-import type { AppliedMorph, Occupant } from "../../../src/framework";
+import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
+import type { AppliedMorph, HistoryStep, Occupant } from "../../../src/framework";
 import { PLANS } from "./plans";
 
 const seed = PLANS[0].data as any;
@@ -43,21 +43,17 @@ export default function App() {
   const [occupants, setOccupantsState] = useState<Occupant[]>(() => seed.occupants);
   const [size, setSize] = useState({ w: seed.width as number, h: seed.height as number });
   const [errors, setErrors] = useState<string[]>([]);
-  const [past, setPast] = useState<Occupant[][]>([]);
-  const [future, setFuture] = useState<Occupant[][]>([]);
-  // The morph chain is the principled history; past/future snapshots stay as
-  // the fallback for steps no morph covers (open, reload, unrecognized diffs).
-  const [chain, setChain] = useState<AppliedMorph[]>(() => (seed.morphs as AppliedMorph[]) ?? []);
-  const [redoChain, setRedoChain] = useState<AppliedMorph[]>([]);
+  const [past, setPast] = useState<HistoryStep[]>([]);
+  const [future, setFuture] = useState<HistoryStep[]>([]);
+  // Adopted file chain: written back out on save, but never enters the undo
+  // stack, so every undoable step carries its own snapshot and morph together.
+  const [adopted, setAdopted] = useState<AppliedMorph[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const dims = { width: size.w, height: size.h };
+
   const push = (next: Occupant[]) => {
-    const morph = diffToMorph(occupants, next);
-    setPast(p => [...p.slice(-49), occupants]);
-    if (morph) {
-      setChain(c => [...c.slice(-49), morph]);
-      setRedoChain([]);
-    }
+    setPast(p => pushHistory(p, occupants, diffToMorph(occupants, next)));
     setFuture([]);
     setOccupantsState(next);
   };
@@ -65,56 +61,26 @@ export default function App() {
   const reset = (next: Occupant[], w: number, h: number, morphs?: AppliedMorph[]) => {
     setPast([]);
     setFuture([]);
-    // Adopted chains travel with undo frames (see save); entries without an
-    // undo frame still replay, but undo of a frameless setCell removes the cell.
-    setChain(morphs ?? []);
-    setRedoChain([]);
+    setAdopted(morphs ?? []);
     setOccupantsState(next);
     setSize({ w, h });
     setErrors([]);
   };
 
   const undo = () => {
-    if (past.length === 0) return;
-    const top = chain[chain.length - 1];
-    if (top) {
-      const inverted = invertMorph({ occupants, width: size.w, height: size.h }, top);
-      if (inverted) {
-        setFuture(f => [occupants, ...f]);
-        setRedoChain(r => [top, ...r]);
-        setOccupantsState(inverted.occupants);
-        setPast(p => p.slice(0, -1));
-        setChain(c => c.slice(0, -1));
-        return;
-      }
-      // Known morph but not invertible here: keep chain aligned, restore snapshot.
-      setRedoChain(r => [top, ...r]);
-      setChain(c => c.slice(0, -1));
-    }
-    setFuture(f => [occupants, ...f]);
-    setOccupantsState(past[past.length - 1]);
-    setPast(p => p.slice(0, -1));
+    const r = undoHistory(past, future, occupants, dims);
+    if (!r.undone) return;
+    setPast(r.past);
+    setFuture(r.future);
+    setOccupantsState(r.occupants);
   };
 
   const redo = () => {
-    if (future.length === 0) return;
-    const [top, ...restRedo] = redoChain;
-    if (top) {
-      const res = applyMorph({ occupants, width: size.w, height: size.h }, top);
-      if (res.ok) {
-        setPast(p => [...p, occupants]);
-        setChain(c => [...c, top]);
-        setRedoChain(restRedo);
-        setFuture(f => f.slice(1));
-        setOccupantsState(res.state.occupants);
-        return;
-      }
-      setRedoChain(restRedo);
-    }
-    const [next, ...rest] = future;
-    setPast(p => [...p, occupants]);
-    setFuture(rest);
-    setOccupantsState(next);
+    const r = redoHistory(past, future, occupants, dims);
+    if (!r.redone) return;
+    setPast(r.past);
+    setFuture(r.future);
+    setOccupantsState(r.occupants);
   };
 
   const reloadFile = () => reset(seed.occupants, seed.width, seed.height);
@@ -133,7 +99,11 @@ export default function App() {
       turns: seed.ruleSet.turns,
       outcomes: seed.ruleSet.outcomes,
       interpretation: seed.interpretation,
-      ...(chain.length > 0 ? { morphs: chain } : {}),
+      ...(() => {
+        const stepped = past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
+        const morphs = [...adopted, ...stepped];
+        return morphs.length > 0 ? { morphs } : {};
+      })(),
     };
     const blob = new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
