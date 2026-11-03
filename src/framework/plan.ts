@@ -1,5 +1,6 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
+import { validateChain, type AppliedMorph } from "./morphs/registry";
 
 // ---------- Plan parsing & validation ----------
 export function parsePlan(text: string): { data: any; errors: string[]; format: "json" | "yaml" | "xml" } {
@@ -281,6 +282,8 @@ export type LoadedPlan = {
   occupants?: Occupant[];
   regions?: Region[];
   firstTurn: string;
+  /** Optional morph sequence (base + morphs); absent means snapshot-only plan. */
+  morphs?: AppliedMorph[];
 };
 
 export function loadPlan(
@@ -293,6 +296,9 @@ export function loadPlan(
   const errors = validatePlan(data, tiling);
   if (data?.component && !KNOWN_COMPONENTS.includes(data.component)) {
     errors.push(`Unknown component "${data.component}" (available: ${KNOWN_COMPONENTS.join(", ")})`);
+  }
+  if (data?.morphs !== undefined) {
+    for (const e of validateChain(data.morphs, { tilingId: data.tilingId })) errors.push(e);
   }
   if (errors.length > 0) return { ok: false, errors };
   const setup = data.ruleSet?.setup || {};
@@ -316,6 +322,7 @@ export function loadPlan(
         (data.ruleSet?.turns as any)?.first ||
         (data.ruleSet?.turns as any)?.order?.[0] ||
         "white",
+      morphs: Array.isArray(data.morphs) ? data.morphs : undefined,
     },
   };
 }

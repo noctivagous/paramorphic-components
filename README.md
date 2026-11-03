@@ -398,6 +398,8 @@ AI assembles apps under four rules:
 - **Introspection guides the work.** The AI asks what has been morphed so far and which morphs apply next, so it starts from the current state instead of guessing.
 - **Custom code is the exception.** It lives in a named morph that can be reviewed alone.
 
+Runtime status: the morph registry exists (`src/framework/morphs/registry.ts`, replay via `replayMorphs`, introspection via `listMorphs`/`describeChain`). Stored plans stay loadable snapshots and may now carry an optional `morphs[]` sequence, validated on load. Spreadsheet undo pops applied morphs via their inverses (`sheet.setCell`, `sheet.clearCell` in `src/framework/morphs/sheet.ts`); the snapshot history stack remains as the fallback for steps no morph covers. Morphs that cannot invert declare `invertible: false` and use the snapshot path (the Q4 policy).
+
 ## 10. Reconciliation log
 
 | Conflict in the sources | Resolution |
