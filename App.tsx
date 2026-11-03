@@ -14,6 +14,7 @@ import {
 } from "./src/framework";
 import { STORED_PLANS, getStoredPlan } from "./plans";
 import { SpreadsheetView } from "./src/views/SpreadsheetView";
+import { PlayerView } from "./src/views/PlayerView";
 import type {
   LogicTriple,
   Occupant,
@@ -581,6 +582,15 @@ export default function App() {
                 setOccupants={setOccupants}
                 width={width}
                 height={height}
+              />
+            ) : component === "Grid" && (interpretation as any)?.view === "player" ? (
+              <PlayerView
+                occupants={occupants}
+                setOccupants={setOccupants}
+                tiling={tiling}
+                width={width}
+                height={height}
+                mapping={(interpretation as any)?.sound?.pitchMapping}
               />
             ) : component === "Grid" && (
               <GridViewport

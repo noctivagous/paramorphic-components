@@ -351,7 +351,7 @@
   },
   "occupants": [
     {
-      "id": "j1zmg46",
+      "id": "w17jcti",
       "anchor": {
         "q": 2,
         "r": 0
@@ -393,7 +393,7 @@
       }
     },
     {
-      "id": "msyov77",
+      "id": "si80zzu",
       "anchor": {
         "q": 6,
         "r": 1
@@ -426,7 +426,7 @@
       }
     },
     {
-      "id": "6vv4xei",
+      "id": "pc5jfzm",
       "anchor": {
         "q": 10,
         "r": 2
@@ -749,13 +749,13 @@
   },
   "outcomes": [],
   "interpretation": {
+    "view": "player",
     "sound": {
       "pitchMapping": {
         "kind": "semitone",
         "attr": "pitch",
         "baseHz": 220
-      },
-      "note": "Assign data.pitch per occupant (semitones above baseHz) when placing notes; rows map to scale degrees."
+      }
     }
   }
 }
