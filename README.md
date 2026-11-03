@@ -2,23 +2,88 @@
 
 ## Q and A
 
+
 > Most of the GUI in apps is rectangular, makes use of grids.
 
 Yes. A grid is a strong foundation for a large share of GUI work: forms, tables, calendars, dashboards, timelines, menus, and many layouts all arrange things in rows and columns.
 
 The opportunity is bigger than drawing rectangles. If the same grid also provides sizing, nesting, interaction, navigation, and rules, apps can share substantial behavior as well as layout.
 
-> Even just for GUI, when we made our first demo, from the same generic component we were able to make chess, checkers, calendar layouts and setups.  Each one stemmed
-from the same root component because it is recognized that they carry similar features and facets
+> Even just for GUI, when we made our first demo, from the same generic (what we call paramorphic) component we were able to make layouts and basic interactive setups for chess, checkers, a calendar,
+a timeline editor.  We recognized first that grids are the host and they have occupants, in many scenarios.  Each setup one stemmed from the same root component because it is recognized that they carry similar features and facets
 
 Chess, checkers, and a calendar look like different GUI problems, yet each can use the same underlying grid with different occupants, layout, and behavior. Reusing that foundation 
-can eliminate substantial repeated UI work even before the full morph runtime exists.
+can eliminate substantial repeated UI work even before the full [paramorphic component] morph runtime exists.
 
 > Our grid component is flexible enough to make keyboards, meaning that we know that elements will be offset and some will be larger than others.
 
 A keyboard is a stronger example than a uniform table: keys vary in size and rows are offset. If your Grid represents those, that shows it can handle irregular layouts, not just equal-sized cells.
 
 That broadens the case for using it as a common GUI foundation. The useful next proof is to build and test the keyboard from a plan, including resizing and interaction, so that capability is established in the current runtime.
+
+> So even now it is quite a valuable base for setting up a variety of GUI components, and if AI is doing it would construct an app's GUI foundation quickly.
+
+Yes. A flexible Grid that already supports varied sizes, offsets, and occupants can be a valuable foundation for many GUIs. AI could use it to assemble a first layout quickly while reusing consistent behavior instead of generating each interface from scratch.
+
+The practical question now is how reliably AI can do that from a concise plan, and how much custom code remains afterward. Building a few different interfaces and measuring those would demonstrate the value you’ve identified.
+
+> We should know what we are talking about in this project as we build it.  List off what each mean: morph, registery, vocabulary, etc. for our project.
+
+Here’s a working vocabulary for this project. Some terms describe capabilities we have today; others describe the intended system.
+
+- Paramorphic — The approach: start with a general component and progressively shape it into an application-specific form.
+- Component — A reusable structure with data and behavior. Grid is the most developed example; Graph, Tree, Path, Protocol, and Logic are also envisioned.
+- Substrate — A component’s underlying structure. For Grid, it is the arrangement of cells.
+- Occupant — Something placed on a substrate, such as a chess piece, spreadsheet cell, sequencer note, or key.
+- Rule — A constraint or behavior governing a component or its occupants, such as a piece’s legal moves.
+- Interpretation — How shared data is understood or presented: for example, reading grid occupants as notes rather than spreadsheet cells.
+- Morph — A named, parameterized transformation of state or configuration. Today, examples include setting a sheet cell and resizing a grid.
+- Morph vocabulary — A related set of morphs, such as the sheet vocabulary’s set-cell and clear-cell operations. A vocabulary supplies meanings and behaviors; the shared machinery executes them.
+- Registry — The catalog of known morph definitions. It lets the runtime find a morph by name and ask it to validate or perform an operation.
+- Morph chain — An ordered sequence of morphs. Order matters because a later step can depend on an earlier one.
+- Plan — A stored description used to construct or configure an app. In the current implementation, plans include configuration, a base, and optionally a morph chain; not all app behavior is expressed as morphs yet.
+- Base state — The starting state to which a chain is applied.
+- Replay — Applying a chain in order to its base to reconstruct a result.
+- Snapshot — A stored copy of state at a particular moment. It can serve as a starting point, a cached result, or an undo fallback.
+- Inverse — An operation that attempts to reverse a morph, using captured prior state when necessary.
+- History — The record used for undo and redo. It may contain morphs and snapshots; it is not necessarily the complete construction plan.
+- Validation — Checking that a plan, morph, or resulting state meets the system’s requirements before use.
+- Introspection — Asking the system what morphs exist, what has been applied, or what can be applied next.
+- Runtime — The machinery that loads and validates plans and carries out their operations.
+- Adapter — Code connecting the framework to a platform capability, such as audio, storage, rendering, or networking.
+- Composition — Combining components, such as a Grid hosting another component inside an occupant. This remains a larger project goal.
+
+The key distinction is: a component provides the structure; a vocabulary describes ways to change it; the registry and runtime carry out those changes; a plan records the intended construction.
+
+> And then if you set up an app with our system, what does the directory filetree look like?
+
+Today, the spreadsheet app is organized like this:
+
+apps/spreadsheet/
+├── index.html
+├── vite.config.ts
+├── morph-plans/
+│   └── spreadsheet.json     # App configuration, base, and morph chain
+└── src/
+    ├── main.tsx             # Starts the app
+    ├── App.tsx              # App shell: menus, history, save/open
+    └── plans.ts             # Makes the app's plans available
+
+It imports shared pieces from elsewhere in the project:
+
+src/
+├── framework/
+│   ├── morphs/              # Registry and morph vocabularies
+│   ├── plan.ts              # Plan loading and validation
+│   ├── history.ts           # Undo and redo
+│   └── ...                  # Grid and other shared mechanisms
+└── views/
+    └── SpreadsheetView.tsx  # Spreadsheet presentation and interaction
+
+The intended direction is for each app to have its own plan and a thin shell, while sharing components and stock morphs. Today the shell and view still contain application-specific code, so the plan does not yet describe the entire app.
+
+
+
 
 
 
