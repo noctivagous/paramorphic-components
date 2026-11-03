@@ -20,6 +20,12 @@ function validateOcc(o: unknown): string[] {
   return [];
 }
 
+/** An absent undo frame is a failure, never a guess: throw so the caller falls back to a snapshot restore. */
+function needFrame(undoCtx: unknown, morph: string): { prev?: Occupant | null } {
+  if (undoCtx === undefined) throw new Error(`${morph} has no inverse data; cannot invert`);
+  return undoCtx as { prev?: Occupant | null };
+}
+
 registerMorph<SetCellParams>({
   name: "sheet.setCell",
   describe: "Write or replace one cell occupant",
@@ -28,12 +34,18 @@ registerMorph<SetCellParams>({
     if (!p || typeof p !== "object") return ["params must be { occ }"];
     return validateOcc((p as SetCellParams).occ);
   },
+  check: (state, p) => {
+    const { q, r } = p.occ.anchor;
+    return q < 0 || r < 0 || q >= state.width || r >= state.height
+      ? [`occ "${p.occ.id}" anchor (${q},${r}) is outside ${state.width}x${state.height}`]
+      : [];
+  },
   apply: (state: PlanState, p: SetCellParams) => ({
     ...state,
     occupants: upsertOccupant(state.occupants, p.occ),
   }),
   invert: (state: PlanState, p: SetCellParams, undoCtx: unknown) => {
-    const prev = (undoCtx as { prev?: Occupant | null } | undefined)?.prev ?? null;
+    const { prev } = needFrame(undoCtx, "sheet.setCell");
     if (prev) return { ...state, occupants: upsertOccupant(state.occupants, prev) };
     return { ...state, occupants: removeOccupant(state.occupants, p.occ.id) };
   },
@@ -49,12 +61,14 @@ registerMorph<CellRef>({
     }
     return [];
   },
+  check: (state, p) =>
+    state.occupants.some(o => o.id === p.id) ? [] : [`occupant "${p.id}" is not present`],
   apply: (state: PlanState, p: CellRef) => ({
     ...state,
     occupants: removeOccupant(state.occupants, p.id),
   }),
   invert: (state: PlanState, _p: CellRef, undoCtx: unknown) => {
-    const prev = (undoCtx as { prev?: Occupant | null } | undefined)?.prev ?? null;
+    const { prev } = needFrame(undoCtx, "sheet.clearCell");
     if (!prev) return state;
     return { ...state, occupants: upsertOccupant(state.occupants, prev) };
   },

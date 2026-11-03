@@ -3,7 +3,7 @@
 // loadPlan, so a corrupt file can never become a broken board.
 import React, { useRef, useState } from "react";
 import { SpreadsheetView } from "../../../src/views/SpreadsheetView";
-import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
+import { chainForSave, loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
 import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
 import { PLANS } from "./plans";
 
@@ -65,6 +65,7 @@ export default function App() {
   // every undoable step carries its own snapshot and morph together.
   const [base, setBase] = useState<PlanBase>(() => bootBase);
   const [adopted, setAdopted] = useState<AppliedMorph[]>(() => bootPlan?.morphs ?? []);
+  const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const dims = { width: size.w, height: size.h };
@@ -83,6 +84,7 @@ export default function App() {
     setOccupantsState(next);
     setSize({ w, h });
     setErrors([]);
+    setNotice(null);
   };
 
   const undo = () => {
@@ -106,7 +108,19 @@ export default function App() {
 
   const save = () => {
     const stepped = past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
-    const morphs = [...adopted, ...stepped];
+    // Self-verifying save: publish the full chain only when it still
+    // reconstructs the sheet. A truncated history or a snapshot-only gap
+    // collapses to an honest checkpoint instead of a partial chain.
+    const saved = chainForSave(base, [...adopted, ...stepped], occupants, size.w, size.h);
+    if (saved.checkpointed) {
+      setBase(saved.base);
+      setAdopted([]);
+      setPast([]);
+      setFuture([]);
+      setNotice("Saved as a snapshot checkpoint: the undo history exceeded what the chain could reconstruct, so it restarted from this file.");
+    } else {
+      setNotice(null);
+    }
     const plan = {
       $schema: "paramorphic-plan/1",
       component: "Grid",
@@ -120,11 +134,8 @@ export default function App() {
       turns: seed.ruleSet.turns,
       outcomes: seed.ruleSet.outcomes,
       interpretation: seed.interpretation,
-      // The file stays replayable: base + morphs reconstruct the cached
-      // occupants on the next open, verified by loadPlan before anything
-      // is applied.
-      base,
-      morphs,
+      base: saved.base,
+      morphs: saved.morphs,
     };
     const blob = new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -198,6 +209,11 @@ export default function App() {
               • {err}
             </div>
           ))}
+        </div>
+      )}
+      {notice && (
+        <div className="mt-2 p-2 rounded-[8px] bg-[var(--lime-bg)] border border-[var(--border)] text-[9px] text-[var(--text-dim)]">
+          {notice}
         </div>
       )}
       <div className="mt-3">

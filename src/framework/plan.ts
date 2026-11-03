@@ -1,6 +1,6 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
-import { replayMorphs, validateChain, type AppliedMorph, type PlanState } from "./morphs/registry";
+import { replayMorphs, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
 
 // ---------- Plan parsing & validation ----------
 export function parsePlan(text: string): { data: any; errors: string[]; format: "json" | "yaml" | "xml" } {
@@ -424,6 +424,29 @@ export function loadPlan(
       morphs,
     },
   };
+}
+
+/**
+ * Decide what a save publishes. When the in-memory chain still reconstructs
+ * the current state, the full base + chain is saved. Otherwise — history-cap
+ * truncation dropped the oldest steps, a snapshot-only edit left a gap no
+ * morph covers, or anything else diverged — save an honest snapshot
+ * checkpoint (current state as the new base, empty chain) instead of
+ * silently publishing a partial chain as a complete one.
+ */
+export function chainForSave(
+  base: PlanBase,
+  chain: AppliedMorph[],
+  occupants: Occupant[],
+  width: number,
+  height: number,
+  ctx: MorphContext = {}
+): { base: PlanBase; morphs: AppliedMorph[]; checkpointed: boolean } {
+  const replayed = replayMorphs(base, chain, ctx);
+  if (replayed.ok && statesEqual(replayed.state, occupants, width, height) === null) {
+    return { base, morphs: chain, checkpointed: false };
+  }
+  return { base: { occupants, width, height }, morphs: [], checkpointed: true };
 }
 
 export type PlanApplyTarget = {

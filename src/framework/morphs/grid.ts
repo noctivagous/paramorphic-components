@@ -18,6 +18,20 @@ function validateOcc(o: unknown): string[] {
   return [];
 }
 
+function checkBounds(state: PlanState, o: Occupant): string[] {
+  const { q, r } = o.anchor;
+  if (q < 0 || r < 0 || q >= state.width || r >= state.height) {
+    return [`occ "${o.id}" anchor (${q},${r}) is outside ${state.width}x${state.height}`];
+  }
+  return [];
+}
+
+/** An absent undo frame is a failure, never a guess: throw so the caller falls back to a snapshot restore. */
+function needFrame(undoCtx: unknown, morph: string): { prev?: Occupant | null } {
+  if (undoCtx === undefined) throw new Error(`${morph} has no inverse data; cannot invert`);
+  return undoCtx as { prev?: Occupant | null };
+}
+
 registerMorph<{ occ: Occupant }>({
   name: "grid.upsertOccupant",
   describe: "Place or replace one grid occupant",
@@ -26,12 +40,13 @@ registerMorph<{ occ: Occupant }>({
     if (!p || typeof p !== "object") return ["params must be { occ }"];
     return validateOcc((p as { occ: Occupant }).occ);
   },
+  check: (state, p) => checkBounds(state, p.occ),
   apply: (state: PlanState, p: { occ: Occupant }) => ({
     ...state,
     occupants: upsertOccupant(state.occupants, p.occ),
   }),
   invert: (state: PlanState, p: { occ: Occupant }, undoCtx: unknown) => {
-    const prev = (undoCtx as { prev?: Occupant | null } | undefined)?.prev ?? null;
+    const { prev } = needFrame(undoCtx, "grid.upsertOccupant");
     if (prev) return { ...state, occupants: upsertOccupant(state.occupants, prev) };
     return { ...state, occupants: removeOccupant(state.occupants, p.occ.id) };
   },
@@ -47,12 +62,14 @@ registerMorph<{ id: string }>({
     }
     return [];
   },
+  check: (state, p) =>
+    state.occupants.some(o => o.id === p.id) ? [] : [`occupant "${p.id}" is not present`],
   apply: (state: PlanState, p: { id: string }) => ({
     ...state,
     occupants: removeOccupant(state.occupants, p.id),
   }),
   invert: (state: PlanState, _p: { id: string }, undoCtx: unknown) => {
-    const prev = (undoCtx as { prev?: Occupant | null } | undefined)?.prev ?? null;
+    const { prev } = needFrame(undoCtx, "grid.removeOccupant");
     if (!prev) return state;
     return { ...state, occupants: upsertOccupant(state.occupants, prev) };
   },
@@ -79,7 +96,9 @@ registerMorph<{ width: number; height: number }>({
   }),
   invert: (state: PlanState, _p: { width: number; height: number }, undoCtx: unknown) => {
     const prev = undoCtx as { prevWidth?: number; prevHeight?: number } | undefined;
-    if (typeof prev?.prevWidth !== "number" || typeof prev?.prevHeight !== "number") return state;
+    if (typeof prev?.prevWidth !== "number" || typeof prev?.prevHeight !== "number") {
+      throw new Error("grid.resize has no inverse data; cannot invert");
+    }
     return { ...state, width: prev.prevWidth, height: prev.prevHeight };
   },
 });

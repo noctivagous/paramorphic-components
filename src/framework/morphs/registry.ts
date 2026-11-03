@@ -14,6 +14,8 @@ export type PlanState = {
 
 export type MorphContext = {
   tilingId?: string;
+  width?: number;
+  height?: number;
 };
 
 export type MorphDef<P = unknown> = {
@@ -22,8 +24,21 @@ export type MorphDef<P = unknown> = {
   /** False when popping this morph must fall back to a snapshot restore. */
   invertible: boolean;
   validate: (params: P, ctx: MorphContext) => string[];
+  /**
+   * State-dependent applicability: does this morph make sense against this
+   * exact state (anchor in bounds, target occupant present)? Used when
+   * testing a candidate morph and when replaying dependent steps after an
+   * earlier morph is removed or replaced. Absent means always applicable
+   * once validated.
+   */
+  check?: (state: PlanState, params: P, ctx: MorphContext) => string[];
   apply: (state: PlanState, params: P) => PlanState;
-  /** Only called when invertible. undoCtx is AppliedMorph.inverse. */
+  /**
+   * Only called when invertible. undoCtx is AppliedMorph.inverse. Throw when
+   * the undo frame is absent or unusable so the caller falls back to a
+   * snapshot restore instead of guessing — a faulty inverse must never
+   * silently claim success.
+   */
   invert: (state: PlanState, params: P, undoCtx: unknown) => PlanState;
 };
 
@@ -124,4 +139,103 @@ export function invertMorph(state: PlanState, applied: AppliedMorph): PlanState 
   } catch {
     return null;
   }
+}
+
+/**
+ * Is a candidate morph applicable to this exact state? Reports the unknown
+ * morph, the parameter errors, and the state-dependent errors together, so a
+ * human or AI can act on the message. An empty array means applicable.
+ */
+export function checkMorphState(
+  name: string,
+  state: PlanState,
+  params: unknown,
+  ctx: MorphContext = {}
+): string[] {
+  const def = REGISTRY.get(name);
+  if (!def) {
+    return [`unknown morph "${name}" (available: ${[...REGISTRY.keys()].join(", ") || "none"})`];
+  }
+  const errors = def.validate(params, ctx).map(e => `${name}: ${e}`);
+  if (errors.length > 0) return errors;
+  if (def.check) {
+    for (const e of def.check(state, params, ctx)) errors.push(`${name}: ${e}`);
+  }
+  return errors;
+}
+
+/** Replay with per-step state checks, for edits that rewrite the chain. */
+function replayChecked(
+  base: PlanState,
+  chain: AppliedMorph[],
+  ctx: MorphContext
+): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
+  let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
+  for (let i = 0; i < chain.length; i++) {
+    const stepErrors = checkMorphState(chain[i].name, state, chain[i].params, ctx);
+    if (stepErrors.length > 0) {
+      return { ok: false, errors: stepErrors.map(e => `morphs[${i}]: ${e}`) };
+    }
+    const def = REGISTRY.get(chain[i].name);
+    if (!def) return { ok: false, errors: [`morphs[${i}]: unknown morph "${chain[i].name}"`] };
+    state = def.apply(state, chain[i].params);
+  }
+  return { ok: true, state };
+}
+
+/**
+ * Remove an earlier morph and replay the dependent steps over the base.
+ * A later step that no longer applies (for example it removes the occupant
+ * the deleted step created) is reported as a conflict with its step index —
+ * the chain is left unchanged for the caller to resolve.
+ */
+export function removeMorphAt(
+  base: PlanState,
+  chain: AppliedMorph[],
+  index: number,
+  ctx: MorphContext = {}
+): { ok: true; state: PlanState; chain: AppliedMorph[] } | { ok: false; errors: string[] } {
+  if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
+    return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
+  }
+  const next = chain.filter((_, i) => i !== index);
+  const replayed = replayChecked(base, next, ctx);
+  if (!replayed.ok) {
+    return {
+      ok: false,
+      errors: [`removing morphs[${index}] (${chain[index].name}) breaks dependents:`, ...replayed.errors],
+    };
+  }
+  return { ok: true, state: replayed.state, chain: next };
+}
+
+/**
+ * Replace an earlier morph and replay the dependent steps. Same conflict
+ * reporting as removal when a later step stops applying.
+ */
+export function replaceMorphAt(
+  base: PlanState,
+  chain: AppliedMorph[],
+  index: number,
+  replacement: AppliedMorph,
+  ctx: MorphContext = {}
+): { ok: true; state: PlanState; chain: AppliedMorph[] } | { ok: false; errors: string[] } {
+  if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
+    return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
+  }
+  if (!replacement || typeof replacement.name !== "string") {
+    return { ok: false, errors: ["replacement morph needs a name"] };
+  }
+  if (!REGISTRY.get(replacement.name)) {
+    return { ok: false, errors: [`unknown morph "${replacement.name}"`] };
+  }
+  const next = chain.map((m, i) => (i === index ? replacement : m));
+  const replayed = replayChecked(base, next, ctx);
+  if (!replayed.ok) {
+    return {
+      ok: false,
+      errors: [`replacing morphs[${index}] with ${replacement.name} breaks dependents:`, ...replayed.errors],
+    };
+  }
+  return { ok: true, state: replayed.state, chain: next };
 }

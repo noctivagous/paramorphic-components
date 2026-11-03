@@ -10,13 +10,13 @@ This roadmap turns the goals in [README.md](README.md) into deliverable work. Co
 
 ## 2. Make morph plans executable and trustworthy
 
-- [ ] Define a versioned stored-plan contract: base state, ordered morphs, application context, and the relationship between a replayed result and any cached snapshot. Specify migration and snapshot-only compatibility.
-- [ ] Make load validate and replay a chain against its base before applying it. Check state-dependent constraints and the resulting state; report actionable errors with the failing step. Do not partially apply an invalid plan.
-- [ ] Make save produce a complete, replayable plan. Account for history limits, snapshot-only edits, undo/redo, and branching; never silently publish a partial chain as a complete one.
-- [ ] Add round-trip tests: save, reload, replay from the stored base, and compare the resulting state. Include invalid morphs, invalid resulting states, snapshot-only plans, history truncation, and undo followed by a new edit.
-- [ ] Define inverse capture and failure semantics. Test replacement, removal, missing inverse data, non-invertible steps, and snapshot fallback; ensure fallback cannot silently claim a faulty inverse succeeded.
-- [ ] Support inspecting the actual applied chain and determining which morphs are applicable to the current state, with parameters and validation errors useful to a human or AI.
-- [ ] Define removal or replacement of an earlier morph: replay dependent steps, detect invalid dependencies, and report conflicts. Test this separately from undoing the most recent edit.
+- [x] Define a versioned stored-plan contract: base state, ordered morphs, application context, and the relationship between a replayed result and any cached snapshot. Specify migration and snapshot-only compatibility.
+- [x] Make load validate and replay a chain against its base before applying it. Check state-dependent constraints and the resulting state; report actionable errors with the failing step. Do not partially apply an invalid plan.
+- [x] Make save produce a complete, replayable plan. Account for history limits, snapshot-only edits, undo/redo, and branching; never silently publish a partial chain as a complete one.
+- [x] Add round-trip tests: save, reload, replay from the stored base, and compare the resulting state. Include invalid morphs, invalid resulting states, snapshot-only plans, history truncation, and undo followed by a new edit.
+- [x] Define inverse capture and failure semantics. Test replacement, removal, missing inverse data, non-invertible steps, and snapshot fallback; ensure fallback cannot silently claim a faulty inverse succeeded.
+- [x] Support inspecting the actual applied chain and determining which morphs are applicable to the current state, with parameters and validation errors useful to a human or AI.
+- [x] Define removal or replacement of an earlier morph: replay dependent steps, detect invalid dependencies, and report conflicts. Test this separately from undoing the most recent edit.
 
 ## 3. Test and generalize the mechanism
 
@@ -67,12 +67,28 @@ round-trip, `grid.resize` inversion) passes alongside `typecheck`, `build` and
 
 Partially evidenced: §2 items 1–2 (contract + replay-before-apply) and §2 item 4
 (round-trip; history truncation and undo-then-new-edit paths not yet covered).
-Still open: chains cover occupants/dimensions only — tiling, rules and
+Still open at that point: chains cover occupants/dimensions only — tiling, rules and
 interpretation remain configured snapshot fields; §2 items 5–7 (removal or
 replacement of an earlier morph, applied-chain inspection); §3 player-note
 vocabulary and second state shape (sequencer/chat reuse the generic
 `grid.*` morphs, which keeps app vocabulary outside core but is not yet a
 player-owned vocabulary).
+
+### 2026-11-03 — TASKS §2 complete
+
+All seven §2 items are now done and checked off. Morphs carry an optional
+state-dependent `check` (bounds, presence) alongside `validate`; `checkMorphState`
+tests a candidate morph against the exact state and `describeChain` reads the
+applied chain in human terms; `removeMorphAt`/`replaceMorphAt` replay dependents
+with step-indexed conflict reports; absent inverse data throws so undo falls
+back to the snapshot instead of guessing (replacement, removal, missing-frame
+and non-invertible paths all tested); `chainForSave` publishes the full chain
+only when it still replays, otherwise an honest snapshot checkpoint that the
+spreadsheet shell adopts with its undo history restarted. `npm run
+verify:replay` grew from 23 to 52 checks covering every §2 path, with
+`typecheck`, `build` and `build:spreadsheet` green. §1 item 1 stays open: the
+script covers plan loading, morph application/inversion and history, but not
+traversal, tilings or game rules.
 
 ## Decisions to resolve with evidence
 
