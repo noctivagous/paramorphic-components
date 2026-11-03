@@ -70,9 +70,12 @@ full inverse/snapshot-fallback contract, tested through history. `tree.*`
 ids, childless-only removal, cycle-rejecting reparent, with tests for isolated
 registration, validation, replay, undo, redo, serialization and plan-file load.
 `npm run verify:replay` stands at 104 checks with `typecheck`, `build`,
-`build:spreadsheet` and `build:player` green. Honest limits: live UI behavior
-(play button, audio) was not exercised — no browser is available here, so the
-player UI claim rests on the clean build plus the reconstruction round trip;
+`build:spreadsheet` and `build:player` green. Browser run (Chrome MCP against
+`dev:player`): boot renders the 3 replayed notes; PLAY flips to STOP with the
+step advancing; toggling a cell records a note and enables UNDO; UNDO removes
+it and enables REDO; REDO restores it (screenshot on file); reload replays the
+chain clean; console shows zero errors/warnings after an empty-favicon fix in
+both app shells. Honest limits: audible tones were not asserted headlessly;
 and discovering applicable morphs still requires callers to supply candidate
 parameters.
 
