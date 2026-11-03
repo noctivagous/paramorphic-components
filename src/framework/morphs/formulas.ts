@@ -199,3 +199,104 @@ export function occupantValueLookup(occupants: Occupant[]): NumberLookup {
     return Number.isFinite(n) ? n : 0;
   };
 }
+
+// ---------- Grid formula recalc (morph over the derivation mechanism) ----------
+// Recomputes every occupant carrying data.formula, in dependency order, and
+// writes the result to data.computed. Pure: returns new occupants, never
+// mutates. Cycles and cell errors come back as messages, not throws, so a
+// sheet stays usable while one cell is broken.
+export type FormulaRecalc = { occupants: Occupant[]; errors: string[] };
+
+const isFormulaCell = (o: Occupant) => typeof (o.data as any)?.formula === "string";
+
+export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
+  const formulaCells = occupants.filter(isFormulaCell);
+  const keyOf = (q: number, r: number) => `${q},${r}`;
+  const idByKey = new Map(occupants.map(o => [keyOf(o.anchor.q, o.anchor.r), o.id]));
+  const byId = new Map(occupants.map(o => [o.id, o]));
+  const dependsOn = (id: string): string[] => {
+    const o = byId.get(id)!;
+    const out: string[] = [];
+    for (const k of formulaDependencies((o.data as any).formula)) {
+      const dep = idByKey.get(k);
+      if (dep && dep !== id && isFormulaCell(byId.get(dep)!)) out.push(dep);
+    }
+    return [...new Set(out)];
+  };
+  // Kahn's algorithm: a cycle quarantines only its own cells (and their
+  // dependents), never the whole sheet.
+  const ids = formulaCells.map(o => o.id);
+  const indeg = new Map(ids.map(id => [id, 0]));
+  const dependents = new Map(ids.map(id => [id, [] as string[]]));
+  for (const id of ids) {
+    for (const d of dependsOn(id)) {
+      indeg.set(id, indeg.get(id)! + 1);
+      dependents.get(d)!.push(id);
+    }
+  }
+  const queue = ids.filter(id => indeg.get(id) === 0);
+  const order: string[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    order.push(id);
+    for (const m of dependents.get(id)!) {
+      indeg.set(m, indeg.get(m)! - 1);
+      if (indeg.get(m) === 0) queue.push(m);
+    }
+  }
+  const errors: string[] = [];
+  const ordered = new Set(order);
+  const cyclic = ids.filter(id => !ordered.has(id));
+  if (cyclic.length > 0) {
+    errors.push(`[framework] derivation cycle detected: ${findLoop().join(" -> ")}`);
+  }
+  function findLoop(): string[] {
+    let loop: string[] | null = null;
+    const stack: string[] = [];
+    const onStack = new Set<string>();
+    const done = new Set<string>();
+    const visit = (id: string): void => {
+      if (loop !== null || done.has(id)) return;
+      if (onStack.has(id)) {
+        loop = [...stack.slice(stack.indexOf(id)), id];
+        return;
+      }
+      onStack.add(id);
+      stack.push(id);
+      for (const d of dependsOn(id)) if (!ordered.has(d)) visit(d);
+      stack.pop();
+      onStack.delete(id);
+      done.add(id);
+    };
+    for (const id of cyclic) visit(id);
+    return loop ?? cyclic;
+  }
+  const base = occupantValueLookup(occupants);
+  const computed = new Map<string, number>();
+  const errored = new Set<string>(cyclic);
+  const look: NumberLookup = (c, r) => {
+    const id = idByKey.get(keyOf(c, r));
+    if (id !== undefined && computed.has(id)) return computed.get(id)!;
+    return base(c, r);
+  };
+  for (const id of order) {
+    const badDep = dependsOn(id).find(d => errored.has(d));
+    if (badDep !== undefined) {
+      errors.push(`${id}: depends on failed cell ${badDep}`);
+      errored.add(id);
+      continue;
+    }
+    try {
+      computed.set(id, evaluateFormula((byId.get(id)!.data as any).formula, look));
+    } catch (e: any) {
+      errors.push(`${id}: ${String(e?.message ?? e)}`);
+      errored.add(id);
+    }
+  }
+  return {
+    occupants: occupants.map(o =>
+      computed.has(o.id) ? { ...o, data: { ...(o.data as any), computed: computed.get(o.id) } } : o
+    ),
+    errors,
+  };
+}

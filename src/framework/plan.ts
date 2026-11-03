@@ -273,6 +273,7 @@ const KNOWN_COMPONENTS: PlanComponent[] = ["Grid", "Graph", "Tree", "Path", "Pro
 export type LoadedPlan = {
   component?: PlanComponent;
   tilingId?: string;
+  interpretation?: any;
   presetId: string;
   ruleSet: RuleSet;
   width: number;
@@ -301,6 +302,7 @@ export function loadPlan(
       component: data.component,
       tilingId: data.tilingId,
       presetId: data.presetId || "custom",
+      interpretation: data.interpretation ?? null,
       ruleSet: data.ruleSet,
       width: setup.width ?? data.width ?? fallback?.width ?? 8,
       height: setup.height ?? data.height ?? fallback?.height ?? 8,
@@ -321,6 +323,7 @@ export function loadPlan(
 export type PlanApplyTarget = {
   setComponent: (c: PlanComponent) => void;
   setTilingId: (t: TilingDef["id"]) => void;
+  setInterpretation: (v: any) => void;
   setPresetId: (p: string) => void;
   setRuleSet: (r: RuleSet) => void;
   setWidth: (w: number) => void;
@@ -342,6 +345,7 @@ export function applyPlan(plan: LoadedPlan, target: PlanApplyTarget): void {
   target.markPlanLoad();
   if (plan.component) target.setComponent(plan.component);
   if (plan.tilingId) target.setTilingId(plan.tilingId as TilingDef["id"]);
+  target.setInterpretation(plan.interpretation ?? null);
   target.setPresetId(plan.presetId);
   target.setRuleSet(plan.ruleSet);
   target.setWidth(plan.width);

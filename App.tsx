@@ -13,6 +13,7 @@ import {
   validatePlan,
 } from "./src/framework";
 import { STORED_PLANS, getStoredPlan } from "./plans";
+import { SpreadsheetView } from "./src/views/SpreadsheetView";
 import type {
   LogicTriple,
   Occupant,
@@ -320,6 +321,7 @@ export default function App() {
   const [planText, setPlanText] = useState("");
   const [planErrors, setPlanErrors] = useState<string[]>([]);
   const [planFormat, setPlanFormat] = useState<string>("yaml");
+  const [interpretation, setInterpretation] = useState<any>(null);
   const [configs, setConfigs] = useState<any[]>([]);
   const [saveName, setSaveName] = useState("");
 
@@ -344,6 +346,7 @@ export default function App() {
     setHeight(d.height);
     setOccupants(d.occupants);
     setRegions(d.regions);
+    setInterpretation(null);
     setCurrentTurn((d.ruleSet.turns as any).first || (d.ruleSet.turns as any).order?.[0] || "white");
     setOutcome(null);
     setSelectedId(null);
@@ -360,6 +363,7 @@ export default function App() {
   const planTarget = {
     setComponent,
     setTilingId,
+    setInterpretation,
     setPresetId,
     setRuleSet,
     setWidth,
@@ -571,7 +575,14 @@ export default function App() {
           </div>
 
           <div className="flex-1">
-            {component === "Grid" && (
+            {component === "Grid" && (interpretation as any)?.view === "spreadsheet" ? (
+              <SpreadsheetView
+                occupants={occupants}
+                setOccupants={setOccupants}
+                width={width}
+                height={height}
+              />
+            ) : component === "Grid" && (
               <GridViewport
                 occupants={occupants}
                 setOccupants={setOccupants}

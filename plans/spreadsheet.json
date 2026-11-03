@@ -1,0 +1,624 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "spreadsheet",
+  "width": 5,
+  "height": 4,
+  "ruleSet": {
+    "id": "spreadsheet",
+    "setup": {
+      "width": 5,
+      "height": 4,
+      "description": "Editable cells; data.formula recomputed via derivation DAG, data.value is source"
+    },
+    "moves": [
+      {
+        "pieceType": "*",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "sheet"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "none",
+      "action": "none"
+    },
+    "regions": [
+      {
+        "id": "R1",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": 0
+          },
+          {
+            "q": 3,
+            "r": 0
+          },
+          {
+            "q": 4,
+            "r": 0
+          }
+        ],
+        "type": "row"
+      },
+      {
+        "id": "R2",
+        "cells": [
+          {
+            "q": 0,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 1
+          },
+          {
+            "q": 2,
+            "r": 1
+          },
+          {
+            "q": 3,
+            "r": 1
+          },
+          {
+            "q": 4,
+            "r": 1
+          }
+        ],
+        "type": "row"
+      },
+      {
+        "id": "R3",
+        "cells": [
+          {
+            "q": 0,
+            "r": 2
+          },
+          {
+            "q": 1,
+            "r": 2
+          },
+          {
+            "q": 2,
+            "r": 2
+          },
+          {
+            "q": 3,
+            "r": 2
+          },
+          {
+            "q": 4,
+            "r": 2
+          }
+        ],
+        "type": "row"
+      },
+      {
+        "id": "R4",
+        "cells": [
+          {
+            "q": 0,
+            "r": 3
+          },
+          {
+            "q": 1,
+            "r": 3
+          },
+          {
+            "q": 2,
+            "r": 3
+          },
+          {
+            "q": 3,
+            "r": 3
+          },
+          {
+            "q": 4,
+            "r": 3
+          }
+        ],
+        "type": "row"
+      },
+      {
+        "id": "CA",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 0,
+            "r": 1
+          },
+          {
+            "q": 0,
+            "r": 2
+          },
+          {
+            "q": 0,
+            "r": 3
+          }
+        ],
+        "type": "col"
+      },
+      {
+        "id": "CB",
+        "cells": [
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 1
+          },
+          {
+            "q": 1,
+            "r": 2
+          },
+          {
+            "q": 1,
+            "r": 3
+          }
+        ],
+        "type": "col"
+      },
+      {
+        "id": "CC",
+        "cells": [
+          {
+            "q": 2,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": 1
+          },
+          {
+            "q": 2,
+            "r": 2
+          },
+          {
+            "q": 2,
+            "r": 3
+          }
+        ],
+        "type": "col"
+      },
+      {
+        "id": "CD",
+        "cells": [
+          {
+            "q": 3,
+            "r": 0
+          },
+          {
+            "q": 3,
+            "r": 1
+          },
+          {
+            "q": 3,
+            "r": 2
+          },
+          {
+            "q": 3,
+            "r": 3
+          }
+        ],
+        "type": "col"
+      },
+      {
+        "id": "CE",
+        "cells": [
+          {
+            "q": 4,
+            "r": 0
+          },
+          {
+            "q": 4,
+            "r": 1
+          },
+          {
+            "q": 4,
+            "r": 2
+          },
+          {
+            "q": 4,
+            "r": 3
+          }
+        ],
+        "type": "col"
+      }
+    ]
+  },
+  "occupants": [
+    {
+      "id": "c-0-0",
+      "anchor": {
+        "q": 0,
+        "r": 0
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "value": 10
+      },
+      "tags": []
+    },
+    {
+      "id": "c-0-1",
+      "anchor": {
+        "q": 0,
+        "r": 1
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "value": 20
+      },
+      "tags": []
+    },
+    {
+      "id": "c-0-2",
+      "anchor": {
+        "q": 0,
+        "r": 2
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=SUM(A1:A2)"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-0-3",
+      "anchor": {
+        "q": 0,
+        "r": 3
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=A3*2"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-1-0",
+      "anchor": {
+        "q": 1,
+        "r": 0
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "value": 5
+      },
+      "tags": []
+    },
+    {
+      "id": "c-1-1",
+      "anchor": {
+        "q": 1,
+        "r": 1
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=B1*3"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-1-2",
+      "anchor": {
+        "q": 1,
+        "r": 2
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=A3+B2"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-2-0",
+      "anchor": {
+        "q": 2,
+        "r": 0
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "value": 7
+      },
+      "tags": []
+    },
+    {
+      "id": "c-2-1",
+      "anchor": {
+        "q": 2,
+        "r": 1
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=AVG(A1:C1)"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-4-0",
+      "anchor": {
+        "q": 4,
+        "r": 0
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=E2+1"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-4-1",
+      "anchor": {
+        "q": 4,
+        "r": 1
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=E1+1"
+      },
+      "tags": []
+    }
+  ],
+  "regions": [
+    {
+      "id": "R1",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        }
+      ],
+      "type": "row"
+    },
+    {
+      "id": "R2",
+      "cells": [
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 1
+        },
+        {
+          "q": 2,
+          "r": 1
+        },
+        {
+          "q": 3,
+          "r": 1
+        },
+        {
+          "q": 4,
+          "r": 1
+        }
+      ],
+      "type": "row"
+    },
+    {
+      "id": "R3",
+      "cells": [
+        {
+          "q": 0,
+          "r": 2
+        },
+        {
+          "q": 1,
+          "r": 2
+        },
+        {
+          "q": 2,
+          "r": 2
+        },
+        {
+          "q": 3,
+          "r": 2
+        },
+        {
+          "q": 4,
+          "r": 2
+        }
+      ],
+      "type": "row"
+    },
+    {
+      "id": "R4",
+      "cells": [
+        {
+          "q": 0,
+          "r": 3
+        },
+        {
+          "q": 1,
+          "r": 3
+        },
+        {
+          "q": 2,
+          "r": 3
+        },
+        {
+          "q": 3,
+          "r": 3
+        },
+        {
+          "q": 4,
+          "r": 3
+        }
+      ],
+      "type": "row"
+    },
+    {
+      "id": "CA",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": 0,
+          "r": 2
+        },
+        {
+          "q": 0,
+          "r": 3
+        }
+      ],
+      "type": "col"
+    },
+    {
+      "id": "CB",
+      "cells": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 1
+        },
+        {
+          "q": 1,
+          "r": 2
+        },
+        {
+          "q": 1,
+          "r": 3
+        }
+      ],
+      "type": "col"
+    },
+    {
+      "id": "CC",
+      "cells": [
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 1
+        },
+        {
+          "q": 2,
+          "r": 2
+        },
+        {
+          "q": 2,
+          "r": 3
+        }
+      ],
+      "type": "col"
+    },
+    {
+      "id": "CD",
+      "cells": [
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 1
+        },
+        {
+          "q": 3,
+          "r": 2
+        },
+        {
+          "q": 3,
+          "r": 3
+        }
+      ],
+      "type": "col"
+    },
+    {
+      "id": "CE",
+      "cells": [
+        {
+          "q": 4,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 1
+        },
+        {
+          "q": 4,
+          "r": 2
+        },
+        {
+          "q": 4,
+          "r": 3
+        }
+      ],
+      "type": "col"
+    }
+  ],
+  "turns": {
+    "type": "free",
+    "order": [],
+    "first": "sheet"
+  },
+  "outcomes": [],
+  "interpretation": {
+    "view": "spreadsheet"
+  }
+}
