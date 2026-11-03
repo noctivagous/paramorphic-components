@@ -25,6 +25,9 @@ import "../src/framework/morphs/grid";
 import "../src/framework/morphs/player";
 import "../src/framework/morphs/cursor";
 import "../src/framework/morphs/tree";
+import { createMorphRegistry } from "../src/framework/morphs/scoped";
+import { chainForTreeSave, loadTreePlan, treeRegistry } from "../src/framework/morphs/tree2";
+import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
 
 let pass = 0;
 let fail = 0;
@@ -658,6 +661,122 @@ for (const f of files) {
   };
   const loaded = loadPlan({ data: file, errors: [] }, null);
   check("tree plan file loads by replay", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
+}
+
+// 25. Disjoint TreeState: hierarchy with no Grid fields, same contract.
+{
+  const base: TreeState = { nodes: [] };
+  const root = { id: "root", kind: "folder" as const, parent: null, label: "albums" };
+  const kid = { id: "vac", kind: "folder" as const, parent: "root", label: "vacation" };
+  const pic = { id: "img", kind: "file" as const, parent: "vac", label: "beach" };
+  const add = (node: any) => ({ name: "tree.addNode", params: { node }, inverse: { prev: null } });
+  // The shape carries no Grid substrate.
+  const keys = Object.keys(base).sort();
+  check("disjoint state has only nodes", JSON.stringify(keys) === JSON.stringify(["nodes"]), keys.join(","));
+  check("disjoint nodes carry no anchor",
+    treeRegistry.checkMorphState("tree.addNode", base, {
+      node: { ...root, anchor: { q: 0, r: 0 } },
+    }).length === 1);
+  // Independent vocabulary: same invariant family, no occupant/placement rule.
+  check("disjoint duplicate rejected",
+    treeRegistry.checkMorphState("tree.addNode", { nodes: [root] }, { node: root }).length === 1);
+  check("disjoint orphan rejected",
+    treeRegistry.checkMorphState("tree.addNode", base, { node: kid }).length === 1);
+  const full: TreeState = { nodes: [root, kid, pic] };
+  check("disjoint child beneath file rejected",
+    treeRegistry.checkMorphState("tree.addNode", full, {
+      node: { id: "leaf", kind: "file", parent: "img", label: "x" },
+    }).length === 1);
+  check("disjoint removal with children rejected",
+    treeRegistry.checkMorphState("tree.removeNode", full, { id: "vac" }).length === 1);
+  check("disjoint cycle rejected",
+    treeRegistry.checkMorphState("tree.reparent", full, { id: "root", parent: "vac" }).length === 1);
+  check("disjoint reparent to file rejected",
+    treeRegistry.checkMorphState("tree.reparent", full, { id: "vac", parent: "img" }).length === 1);
+  // Replay, undo, redo through the scoped registry.
+  const r1 = treeRegistry.replayMorphsChecked(base, [add(root), add(kid)], {}, cloneTreeState);
+  check("disjoint chain replays", r1.ok && (r1 as any).state.nodes.length === 2);
+  if (r1.ok) {
+    const state = (r1 as any).state as TreeState;
+    const withFrames = treeRegistry.recaptureFrames(base, [add(root), add(kid)], cloneTreeState);
+    const back = treeRegistry.invertMorph(state, withFrames[1]);
+    check("disjoint undo removes the node", back !== null && back.nodes.length === 1);
+    if (back) {
+      const fwd = treeRegistry.applyMorph(back, withFrames[1]);
+      check("disjoint redo restores the node", fwd.ok && (fwd as any).state.nodes.length === 2);
+    }
+    const noFrame = treeRegistry.invertMorph(state, { name: "tree.addNode", params: { node: kid } });
+    check("disjoint missing frame falls back (null)", noFrame === null);
+  }
+  // Serialization round-trips through plain JSON.
+  const chain = [add(root), add(kid), add(pic)];
+  const text = JSON.stringify(chain);
+  const back2 = treeRegistry.replayMorphs(base, JSON.parse(text), {}, cloneTreeState);
+  check("disjoint chain serializes and replays", back2.ok && (back2 as any).state.nodes.length === 3);
+  // Plan-file load validates, replays, and rejects tampered caches.
+  const file = { $schema: "paramorphic-plan/1", base, morphs: [add(root), add(kid)], nodes: [root, kid] };
+  const loaded = loadTreePlan(JSON.parse(JSON.stringify(file)));
+  check("disjoint plan file loads by replay", loaded.ok, loaded.ok ? "" : (loaded as any).errors.join("; "));
+  const tampered = loadTreePlan({ ...JSON.parse(JSON.stringify(file)), nodes: [root] });
+  check("disjoint tampered cache rejected", !tampered.ok);
+  const badAnchor = loadTreePlan({
+    $schema: "paramorphic-plan/1", base, morphs: [add({ ...root, anchor: { q: 0, r: 0 } })],
+  });
+  check("disjoint Grid-shaped node rejected", !badAnchor.ok);
+  // Save helper publishes full chains and checkpoints partial ones.
+  if (loaded.ok) {
+    const fullSave = chainForTreeSave(base, (loaded as any).morphs, { nodes: [root, kid] });
+    check("disjoint complete chain saves whole", !fullSave.checkpointed && fullSave.morphs.length === 2);
+    const partial = chainForTreeSave(base, (loaded as any).morphs.slice(1), { nodes: [root, kid] });
+    check("disjoint partial chain checkpoints", partial.checkpointed && partial.morphs.length === 0);
+    const reload = loadTreePlan({ $schema: "paramorphic-plan/1", base: partial.base, morphs: [], nodes: [root, kid] });
+    check("disjoint checkpoint loads", reload.ok);
+  }
+}
+
+// 26. Scoped registries isolate registrations.
+{
+  const a = createMorphRegistry<{ v: number }>();
+  const b = createMorphRegistry<{ v: number }>();
+  a.register({
+    name: "dup.op", describe: "A in scope A", invertible: true,
+    validate: () => [], apply: s => ({ v: s.v + 1 }), invert: s => ({ v: s.v - 1 }),
+  });
+  let collided = false;
+  try {
+    b.register({
+      name: "dup.op", describe: "B in scope B", invertible: true,
+      validate: () => [], apply: s => ({ v: s.v + 10 }), invert: s => ({ v: s.v - 10 }),
+    });
+  } catch {
+    collided = true;
+  }
+  check("same name registers in two scopes", !collided);
+  const ra = a.applyMorph({ v: 0 }, { name: "dup.op", params: {} });
+  const rb = b.applyMorph({ v: 0 }, { name: "dup.op", params: {} });
+  check("scopes resolve independently",
+    ra.ok && rb.ok && (ra as any).state.v === 1 && (rb as any).state.v === 10);
+  a.register({
+    name: "only.a", describe: "only in A", invertible: true,
+    validate: () => [], apply: s => s, invert: s => s,
+  });
+  b.register({
+    name: "only.b", describe: "only in B", invertible: true,
+    validate: () => [], apply: s => s, invert: s => s,
+  });
+  const errA = a.checkMorphState("missing.op", { v: 0 }, {})[0] ?? "";
+  check("unknown-morph error stays in scope",
+    errA.includes("only.a") && !errA.includes("only.b"));
+  // The disjoint tree registry never touched the global Grid registry.
+  check("global registry keeps the Grid-hosted tree",
+    getMorph("tree.addNode") !== undefined &&
+    checkMorphState("tree.addNode", { occupants: [], width: 8, height: 8 }, {
+      occ: { id: "x", anchor: { q: 0, r: 0 }, span: [], type: "folder", data: { label: "x" }, tags: [] },
+    }).length === 0);
+  check("disjoint registry rejects the Grid-shaped occupant",
+    treeRegistry.checkMorphState("tree.addNode", { nodes: [] }, {
+      node: { id: "x", kind: "folder", parent: null, label: "x", anchor: { q: 0, r: 0 } },
+    }).length === 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

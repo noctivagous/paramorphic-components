@@ -21,9 +21,9 @@ This roadmap turns the goals in [README.md](README.md) into deliverable work. Co
 ## 3. Test and generalize the mechanism
 
 - [x] Build a player note vocabulary and wire it through recording, undo, redo, save, load, validation, and replay. First attempt it without editing the registry, history, or plan validation; document any changes that become necessary. Verify actual UI state and saved-plan reconstruction.
-- [x] Exercise a second state shape, such as a traversal cursor, without encoding it as a grid occupant. Decide whether seeking is persisted and undoable in the player; regardless, test the underlying state and history contract. Include inverse and snapshot fallback.
-- [x] Refactor registry, history, and plan boundaries as evidence requires so state, validation context, and snapshots are not fixed to Grid occupants and dimensions. Preserve type safety, isolate registrations, and keep app vocabulary outside core mechanism.
-- [x] Prove the revised contract with a non-Grid component and tests for independent vocabularies, registration, validation, replay, undo, redo, and serialization. Record what the tests establish and what remains unproven.
+- [x] Exercise a carried state field, such as a traversal cursor, without encoding it as a grid occupant. Decide whether seeking is persisted and undoable in the player; regardless, test the underlying state and history contract. Include inverse and snapshot fallback. (Carried-field proof only: `PlanState.cursor` rides on Grid state in `src/framework/morphs/registry.ts`; a genuinely independent state shape remains unproven.)
+- [x] Refactor registry, history, and plan boundaries as evidence requires so state, validation context, and snapshots are not fixed to Grid occupants and dimensions. Preserve type safety, isolate registrations, and keep app vocabulary outside core mechanism. (`src/framework/morphs/scoped.ts` factory gives each scope its own map; `TreeState` carries only `nodes`; `history.ts` stays `PlanState`-typed while disjoint history travels snapshot+morph pairs through the scoped registry with the same fallback rule.)
+- [x] Prove the revised contract with a disjoint-state component and tests for independent vocabularies, registration, validation, replay, undo, redo, and serialization. Record what the tests establish and what remains unproven. (`src/framework/morphs/tree2.ts` + `loadTreePlan`/`chainForTreeSave` over `TreeState`; `verify:replay` §§25–26 cover vocabularies, isolation, validation, replay, undo, redo, serialization, file load, and save checkpoints. Grid-hosted `tree.*` kept for backwards compatibility.)
 
 ## 4. Deliver the validation ladder
 
@@ -51,6 +51,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 - [ ] Define how third-party morphs are registered, versioned, validated, and distributed once the core contract is demonstrated.
 
 ## Evidence log
+
+### 2026-11-03 — TASKS §3 disjoint-state and scoped-registry proof
+
+Review found §3 overstated: `PlanState` stayed `{ occupants, width, height, cursor? }`, `tree.*` reused Grid occupants, all vocabularies shared one `REGISTRY`. Fixed honestly: TASKS §3 items 2–4 and README §11.2 were downgraded to name the exact coupling before any code landed. Then `src/framework/tree-state.ts` (`TreeState = { nodes }`, no Grid fields), `src/framework/morphs/scoped.ts` (`createMorphRegistry<S>()` with per-scope maps), and `src/framework/morphs/tree2.ts` (disjoint `tree.addNode`/`removeNode`/`reparent` plus `loadTreePlan`/`chainForTreeSave`) proved the revised contract: disjoint vocabularies, validation, checked replay, undo/redo with snapshot fallback, JSON serialization, file load with tamper rejection, and save checkpoints. `verify:replay` §§25–26 add 24 checks (131 total, was 107) with `typecheck`, `build`, `build:spreadsheet`, `build:player` green. Honest limits: `history.ts` stays `PlanState`-typed (disjoint history reuses the snapshot+morph pattern through the scoped registry); Grid-hosted `tree.*` kept for backwards compatibility.
 
 ### 2026-11-03 — TASKS §3 complete
 
