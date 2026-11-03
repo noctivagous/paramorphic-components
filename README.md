@@ -406,7 +406,7 @@ AI assembles apps under four rules:
 ## 11. Open questions
 
 1. Is the Graph kernel public (a user-facing component) or an internal layer only?
-2. Is the morph plan written in Ocelot XML, a YAML-style format, or both, with one as a view of the other?
+2. Is the morph plan written in Ocelot XML, a YAML-style format, or both, with one as a view of the other? Decided for stored plans: JSON files, the only lossless serializer; YAML stays display-only (§9.0). Ocelot XML remains open as a possible interchange format.
 3. Which morphs ship as stock, and how are third-party morphs published?
 4. How strictly must morphs be reversible when rules interact (for example removing a gravity rule after pieces have already fallen)?
 5. Does Protocol need a streaming-time dimension that Grid does not have, and if so does it share anything with timeline snapping?
@@ -443,7 +443,7 @@ Measures for every step: share of code shared across apps, size of each plan ver
 | The knight had no moves, because named directions cannot express jumps | 1 | The tiling interface gains offset moves (section 6.1a) |
 | The flat-top hex reused the pointy-top direction names | 2 | Direction names belong to the tiling (section 6.1a) |
 | Span and guest went unused, so multi-cell occupants were untested | 1 | Validation needs a multi-cell case such as Tetris or sequencer notes |
-| Graph, Tree, Path, Protocol, Logic and composition were illustrative mockups, and plans were export-only | 3 to 5 | Not started. A plan must load, validate and run to test section 9.1 |
+| Graph, Tree, Path, Protocol, Logic and composition were illustrative mockups, and plans were export-only | 3 to 5 | Graph etc. still mockups; the plans half is superseded — stored plan files now load through `loadPlan` (§9.0, §11.2), though AI-authored plans driving the runtime (§9.1) remain future work |
 
 ### 11.2 Generic additions implemented
 
