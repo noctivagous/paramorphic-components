@@ -62,8 +62,10 @@ registerMorph<{ occ: Occupant }>({
   check: (state, p) => {
     if (state.occupants.some(o => o.id === p.occ.id)) return [`node "${p.occ.id}" already exists`];
     const parent = parentOf(p.occ);
-    if (parent !== null && !state.occupants.some(o => o.id === parent)) {
-      return [`parent "${parent}" is not present`];
+    if (parent !== null) {
+      const target = state.occupants.find(o => o.id === parent);
+      if (!target) return [`parent "${parent}" is not present`];
+      if (target.type !== "folder") return [`parent "${parent}" is a ${target.type}, not a folder`];
     }
     return [];
   },

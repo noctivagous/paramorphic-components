@@ -69,8 +69,15 @@ full inverse/snapshot-fallback contract, tested through history. `tree.*`
 (`src/framework/morphs/tree.ts`) proves the revised contract off-Grid: unique
 ids, childless-only removal, cycle-rejecting reparent, with tests for isolated
 registration, validation, replay, undo, redo, serialization and plan-file load.
-`npm run verify:replay` stands at 104 checks with `typecheck`, `build`,
-`build:spreadsheet` and `build:player` green. Browser run (Chrome MCP against
+`npm run verify:replay` stands at 107 checks with `typecheck`, `build`,
+`build:spreadsheet` and `build:player` green. A follow-up review caught three
+further gaps, all fixed: `tree.addNode` now rejects children beneath files like
+`reparent` does; every replay entry point spreads the base instead of
+rebuilding it, so checked and plain replay carry the cursor and a valid seek
+replays; and the independence claim is reframed honestly — the cursor is the
+state-independence proof (non-occupant state through the same contract), the
+tree is the vocabulary-independence proof (own invariants, isolated
+registration), and a fully disjoint Tree state stays unproven. Browser run (Chrome MCP against
 `dev:player`): boot renders the 3 replayed notes; PLAY flips to STOP with the
 step advancing; toggling a cell records a note and enables UNDO; UNDO removes
 it and enables REDO; REDO restores it (screenshot on file); reload replays the

@@ -14,6 +14,7 @@ import {
   removeMorphAt,
   replaceMorphAt,
   replayMorphs,
+  replayMorphsChecked,
 } from "../src/framework/morphs/registry";
 import { pushHistory, redoHistory, undoHistory } from "../src/framework/history";
 import { createCursor } from "../src/framework/traversal";
@@ -575,6 +576,16 @@ for (const f of files) {
   const data = JSON.parse(readFileSync("apps/player/morph-plans/player.json", "utf8"));
   const res = loadPlan({ data, errors: [] }, null);
   check("loaded plans carry no cursor", res.ok && (res.plan.base as any).cursor === undefined);
+  // Checked replay carries the cursor: a valid seek over a cursor base replays.
+  const cbase = { occupants: [], width: 2, height: 1, cursor: createCursor(path, { loop: true }) };
+  const checked = replayMorphsChecked(cbase, [
+    { name: "cursor.seekTo", params: { index: 1 }, inverse: { prevIndex: -1, prevFinished: false } },
+  ]);
+  check("seek replays over a cursor base", checked.ok && (checked as any).state.cursor.index === 1 &&
+    (checked as any).state.width === 2);
+  // Plain replay (the save-verify path) no longer drops the cursor either.
+  const plain = replayMorphs(cbase, []);
+  check("plain replay preserves the cursor", plain.ok && (plain as any).state.cursor !== undefined);
 }
 
 // 24. Tree: an independent non-Grid vocabulary on the shared contract.
@@ -593,6 +604,10 @@ for (const f of files) {
   const noOrphan = checkMorphState("tree.addNode", base, { occ: kid });
   check("orphan node rejected", noOrphan.length === 1 && noOrphan[0].includes("not present"));
   const full = { ...base, occupants: [root, kid, pic] };
+  const underFile = { id: "leaf", anchor: { q: 3, r: 0 }, span: [], type: "file", data: { label: "x", parent: "img" }, tags: [] };
+  const noFileParent = checkMorphState("tree.addNode", full, { occ: underFile });
+  check("child beneath a file rejected", noFileParent.length === 1 && noFileParent[0].includes("not a folder"),
+    noFileParent.join("; "));
   check("removing a parent with children rejected",
     checkMorphState("tree.removeNode", full, { id: "vac" }).length === 1);
   check("reparent cycle rejected",

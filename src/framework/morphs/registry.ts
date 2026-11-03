@@ -145,7 +145,7 @@ export function replayMorphs(
   chain: AppliedMorph[],
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
-  let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
+  let state: PlanState = { ...base, occupants: [...base.occupants] };
   for (let i = 0; i < chain.length; i++) {
     const res = applyMorph(state, chain[i], ctx);
     if (!res.ok) return { ok: false, errors: res.errors.map(e => `morphs[${i}]: ${e}`) };
@@ -202,7 +202,7 @@ export function replayMorphsChecked(
   chain: AppliedMorph[],
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
-  let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
+  let state: PlanState = { ...base, occupants: [...base.occupants] };
   for (let i = 0; i < chain.length; i++) {
     const stepErrors = checkMorphState(chain[i].name, state, chain[i].params, ctx);
     if (stepErrors.length > 0) {
@@ -227,7 +227,7 @@ export function recaptureFrames(
   chain: AppliedMorph[],
   _ctx: MorphContext = {}
 ): AppliedMorph[] {
-  let state: PlanState = { occupants: [...base.occupants], width: base.width, height: base.height };
+  let state: PlanState = { ...base, occupants: [...base.occupants] };
   return chain.map((m) => {
     const def = REGISTRY.get(m.name);
     let inverse: unknown = undefined;
