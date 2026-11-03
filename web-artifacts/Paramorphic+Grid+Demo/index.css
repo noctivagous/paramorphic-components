@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Instrument+Serif:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0e0f11;
+  --surface: #15171a;
+  --surface-2: #1c1f23;
+  --surface-3: #24282e;
+  --border: #2a2e36;
+  --border-2: #343a44;
+  --text: #f1f2ee;
+  --muted: #8d9199;
+  --muted-2: #5f646e;
+  --accent: #e8ff52;
+  --accent-ink: #0e0f11;
+  --accent-dim: rgba(232,255,82,0.12);
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --safe-area-inset-top: 0px;
+}
+
+* { font-variant-ligatures: none; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Instrument Serif", Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+.mono {
+  font-family: "Fragment Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* lab slider */
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: var(--border-2);
+  border-radius: 999px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--border);
+  cursor: pointer;
+}
