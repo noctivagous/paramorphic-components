@@ -15,6 +15,7 @@ import {
 import { STORED_PLANS, getStoredPlan } from "./plans";
 import { SpreadsheetView } from "./src/views/SpreadsheetView";
 import { PlayerView } from "./src/views/PlayerView";
+import { ChatView } from "./src/views/ChatView";
 import type {
   LogicTriple,
   Occupant,
@@ -583,6 +584,8 @@ export default function App() {
                 width={width}
                 height={height}
               />
+            ) : component === "Grid" && (interpretation as any)?.view === "chat" ? (
+              <ChatView occupants={occupants} setOccupants={setOccupants} />
             ) : component === "Grid" && (interpretation as any)?.view === "player" ? (
               <PlayerView
                 occupants={occupants}

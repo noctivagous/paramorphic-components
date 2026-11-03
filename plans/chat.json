@@ -1,0 +1,201 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Tree",
+  "tilingId": "square8",
+  "presetId": "chat",
+  "width": 8,
+  "height": 1,
+  "ruleSet": {
+    "id": "chat",
+    "setup": {
+      "width": 8,
+      "height": 1,
+      "description": "Threads are regions; messages are occupants; posting is placing; wire format is length-framed"
+    },
+    "moves": [
+      {
+        "pieceType": "*",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "chat"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "none",
+      "action": "none"
+    },
+    "regions": [
+      {
+        "id": "thread-general",
+        "type": "custom",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": 0
+          }
+        ]
+      },
+      {
+        "id": "thread-paramorphic",
+        "type": "custom",
+        "cells": [
+          {
+            "q": 3,
+            "r": 0
+          },
+          {
+            "q": 4,
+            "r": 0
+          }
+        ]
+      }
+    ]
+  },
+  "occupants": [
+    {
+      "id": "m-0",
+      "anchor": {
+        "q": 0,
+        "r": 0
+      },
+      "span": [],
+      "type": "message",
+      "data": {
+        "thread": "general",
+        "author": "ada",
+        "text": "grid, occupants, rules — same kernel as chess",
+        "ts": 1700000000
+      },
+      "tags": []
+    },
+    {
+      "id": "m-1",
+      "anchor": {
+        "q": 1,
+        "r": 0
+      },
+      "span": [],
+      "type": "message",
+      "data": {
+        "thread": "general",
+        "author": "grace",
+        "text": "plans are the diff, review the plan not the code",
+        "ts": 1700000060
+      },
+      "tags": []
+    },
+    {
+      "id": "m-2",
+      "anchor": {
+        "q": 2,
+        "r": 0
+      },
+      "span": [],
+      "type": "message",
+      "data": {
+        "thread": "general",
+        "author": "ada",
+        "text": "traversal turns steps into sound",
+        "ts": 1700000120
+      },
+      "tags": []
+    },
+    {
+      "id": "m-3",
+      "anchor": {
+        "q": 3,
+        "r": 0
+      },
+      "span": [],
+      "type": "message",
+      "data": {
+        "thread": "paramorphic",
+        "author": "grace",
+        "text": "spreadsheet is a grid with a formula interpretation",
+        "ts": 1700000180
+      },
+      "tags": []
+    },
+    {
+      "id": "m-4",
+      "anchor": {
+        "q": 4,
+        "r": 0
+      },
+      "span": [],
+      "type": "message",
+      "data": {
+        "thread": "paramorphic",
+        "author": "ada",
+        "text": "chat is threads over framed streams",
+        "ts": 1700000240
+      },
+      "tags": []
+    }
+  ],
+  "regions": [
+    {
+      "id": "thread-general",
+      "type": "custom",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        }
+      ]
+    },
+    {
+      "id": "thread-paramorphic",
+      "type": "custom",
+      "cells": [
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "type": "free",
+    "order": [],
+    "first": "chat"
+  },
+  "outcomes": [],
+  "interpretation": {
+    "view": "chat",
+    "wire": {
+      "framing": "length-prefix-u32be",
+      "note": "transport adapter deferred; this file is the local-first half"
+    }
+  }
+}
