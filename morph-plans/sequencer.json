@@ -10,7 +10,7 @@
     "setup": {
       "width": 16,
       "height": 4,
-      "description": "Grid=timeline steps×tracks, occupant span=duration, guest=Path automation"
+      "description": "Grid=timeline steps\u00d7tracks, occupant span=duration, guest=Path automation"
     },
     "moves": [
       {
@@ -757,5 +757,145 @@
         "baseHz": 220
       }
     }
-  }
+  },
+  "base": {
+    "occupants": [],
+    "width": 16,
+    "height": 4
+  },
+  "morphs": [
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "w17jcti",
+          "anchor": {
+            "q": 2,
+            "r": 0
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            }
+          ],
+          "type": "note",
+          "data": {
+            "player": "composer",
+            "vel": 0.8
+          },
+          "tags": [],
+          "guest": {
+            "kind": "Path",
+            "state": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 10
+                },
+                {
+                  "x": 20,
+                  "y": 0
+                },
+                {
+                  "x": 40,
+                  "y": 10
+                }
+              ]
+            }
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "si80zzu",
+          "anchor": {
+            "q": 6,
+            "r": 1
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            }
+          ],
+          "type": "note",
+          "data": {
+            "player": "composer"
+          },
+          "tags": [],
+          "guest": {
+            "kind": "Path",
+            "state": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 5
+                },
+                {
+                  "x": 30,
+                  "y": 15
+                }
+              ]
+            }
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "pc5jfzm",
+          "anchor": {
+            "q": 10,
+            "r": 2
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            }
+          ],
+          "type": "clip",
+          "data": {
+            "player": "composer"
+          },
+          "tags": [],
+          "guest": {
+            "kind": "Grid",
+            "state": {
+              "occupants": [],
+              "width": 3,
+              "height": 1
+            }
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ]
 }

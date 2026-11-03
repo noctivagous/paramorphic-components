@@ -1,6 +1,6 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
-import { validateChain, type AppliedMorph } from "./morphs/registry";
+import { replayMorphs, validateChain, type AppliedMorph, type PlanState } from "./morphs/registry";
 
 // ---------- Plan parsing & validation ----------
 export function parsePlan(text: string): { data: any; errors: string[]; format: "json" | "yaml" | "xml" } {
@@ -271,6 +271,12 @@ export type PlanComponent = "Grid" | "Graph" | "Tree" | "Path" | "Protocol" | "L
 
 const KNOWN_COMPONENTS: PlanComponent[] = ["Grid", "Graph", "Tree", "Path", "Protocol", "Logic", "Compose"];
 
+export type PlanBase = {
+  occupants: Occupant[];
+  width: number;
+  height: number;
+};
+
 export type LoadedPlan = {
   component?: PlanComponent;
   tilingId?: string;
@@ -282,9 +288,72 @@ export type LoadedPlan = {
   occupants?: Occupant[];
   regions?: Region[];
   firstTurn: string;
-  /** Optional morph sequence (base + morphs); absent means snapshot-only plan. */
-  morphs?: AppliedMorph[];
+  /**
+   * Normalized base the morph chain replays over. For snapshot-only plans
+   * (no stored morphs) this is the snapshot itself, so a later save can
+   * write base + new edits as a replayable chain.
+   */
+  base: PlanBase;
+  /** Normalized morph sequence; empty means snapshot-only plan. */
+  morphs: AppliedMorph[];
 };
+
+/** Compare a replayed state against the cached snapshot, order-insensitively. */
+function statesEqual(a: PlanState, occupants: Occupant[], width: number, height: number): string | null {
+  if (a.width !== width || a.height !== height) {
+    return `replayed dimensions ${a.width}x${a.height} do not match cached ${width}x${height}`;
+  }
+  const key = (o: Occupant) => o.id;
+  const ra = [...a.occupants].sort((x, y) => (key(x) < key(y) ? -1 : 1));
+  const rb = [...occupants].sort((x, y) => (key(x) < key(y) ? -1 : 1));
+  if (ra.length !== rb.length) {
+    return `replayed ${ra.length} occupants but cached snapshot has ${rb.length}`;
+  }
+  for (let i = 0; i < ra.length; i++) {
+    if (JSON.stringify(ra[i]) !== JSON.stringify(rb[i])) {
+      return `replayed occupant "${key(ra[i])}" differs from cached snapshot`;
+    }
+  }
+  return null;
+}
+
+function readBase(data: any, width: number, height: number): { base: PlanBase; errors: string[] } {
+  const errors: string[] = [];
+  const raw = data?.base;
+  if (raw === undefined) {
+    // Snapshot-only file: the snapshot is the base for future edits.
+    return {
+      base: {
+        occupants: Array.isArray(data?.occupants) ? data.occupants : [],
+        width,
+        height,
+      },
+      errors,
+    };
+  }
+  if (!raw || typeof raw !== "object") {
+    errors.push("plan.base must be { occupants, width, height }");
+    return { base: { occupants: [], width, height }, errors };
+  }
+  if (!Array.isArray(raw.occupants)) errors.push("plan.base.occupants must be an array");
+  if (typeof raw.width !== "number" || typeof raw.height !== "number") {
+    errors.push("plan.base needs numeric width and height");
+  }
+  (raw.occupants ?? []).forEach((o: Occupant, i: number) => {
+    if (!o || typeof o.id !== "string" || !o.id) errors.push(`plan.base.occupants[${i}] missing id`);
+    if (!o?.anchor || typeof o.anchor.q !== "number" || typeof o.anchor.r !== "number") {
+      errors.push(`plan.base.occupants[${i}] needs a numeric anchor {q,r}`);
+    }
+  });
+  return {
+    base: {
+      occupants: Array.isArray(raw.occupants) ? raw.occupants : [],
+      width: typeof raw.width === "number" ? raw.width : width,
+      height: typeof raw.height === "number" ? raw.height : height,
+    },
+    errors,
+  };
+}
 
 export function loadPlan(
   parsed: { data: any; errors: string[] },
@@ -298,10 +367,39 @@ export function loadPlan(
     errors.push(`Unknown component "${data.component}" (available: ${KNOWN_COMPONENTS.join(", ")})`);
   }
   if (data?.morphs !== undefined) {
-    for (const e of validateChain(data.morphs, { tilingId: data.tilingId })) errors.push(e);
+    if (!Array.isArray(data.morphs)) errors.push("plan.morphs must be an array");
+    else for (const e of validateChain(data.morphs, { tilingId: data.tilingId })) errors.push(e);
   }
   if (errors.length > 0) return { ok: false, errors };
   const setup = data.ruleSet?.setup || {};
+  const width = setup.width ?? data.width ?? fallback?.width ?? 8;
+  const height = setup.height ?? data.height ?? fallback?.height ?? 8;
+  const { base, errors: baseErrors } = readBase(data, width, height);
+  for (const e of baseErrors) errors.push(e);
+  if (errors.length > 0) return { ok: false, errors };
+  const morphs: AppliedMorph[] = Array.isArray(data.morphs) ? data.morphs : [];
+  let occupants: Occupant[] | undefined = Array.isArray(data.occupants) ? data.occupants : undefined;
+  let outWidth = width;
+  let outHeight = height;
+  if (morphs.length > 0) {
+    // The chain constructs the app: replay base + morphs and require the
+    // result to match the cached snapshot. A mismatch is a hard error —
+    // the plan is never partially applied.
+    const replayed = replayMorphs(base, morphs, { tilingId: data.tilingId });
+    if (!replayed.ok) return { ok: false, errors: replayed.errors };
+    if (!occupants) {
+      occupants = replayed.state.occupants;
+      outWidth = replayed.state.width;
+      outHeight = replayed.state.height;
+    } else {
+      const mismatch = statesEqual(replayed.state, occupants, width, height);
+      if (mismatch) return { ok: false, errors: [`plan replay mismatch: ${mismatch}`] };
+      // Use the replayed state as the source of truth.
+      occupants = replayed.state.occupants;
+      outWidth = replayed.state.width;
+      outHeight = replayed.state.height;
+    }
+  }
   return {
     ok: true,
     plan: {
@@ -310,9 +408,9 @@ export function loadPlan(
       presetId: data.presetId || "custom",
       interpretation: data.interpretation ?? null,
       ruleSet: data.ruleSet,
-      width: setup.width ?? data.width ?? fallback?.width ?? 8,
-      height: setup.height ?? data.height ?? fallback?.height ?? 8,
-      occupants: Array.isArray(data.occupants) ? data.occupants : undefined,
+      width: outWidth,
+      height: outHeight,
+      occupants,
       regions: Array.isArray(data.regions)
         ? data.regions
         : Array.isArray(data.ruleSet?.regions)
@@ -322,7 +420,8 @@ export function loadPlan(
         (data.ruleSet?.turns as any)?.first ||
         (data.ruleSet?.turns as any)?.order?.[0] ||
         "white",
-      morphs: Array.isArray(data.morphs) ? data.morphs : undefined,
+      base,
+      morphs,
     },
   };
 }
@@ -349,6 +448,8 @@ export type PlanApplyTarget = {
 export function applyPlan(plan: LoadedPlan, target: PlanApplyTarget): void {
   // Plan is the source of truth: the caller skips the preset effect so a
   // custom plan's rules and occupants are not reset when presetId changes.
+  // plan.occupants is already the replayed chain result when the file
+  // carries morphs, so every shell constructs the app from the chain.
   target.markPlanLoad();
   if (plan.component) target.setComponent(plan.component);
   if (plan.tilingId) target.setTilingId(plan.tilingId as TilingDef["id"]);

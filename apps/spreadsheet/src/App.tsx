@@ -4,10 +4,22 @@
 import React, { useRef, useState } from "react";
 import { SpreadsheetView } from "../../../src/views/SpreadsheetView";
 import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
-import type { AppliedMorph, HistoryStep, Occupant } from "../../../src/framework";
+import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
 import { PLANS } from "./plans";
 
 const seed = PLANS[0].data as any;
+
+// Boot through the same validated replay path as file open, so startup
+// constructs the sheet from the stored base + morph chain — never by
+// reading the cached snapshot directly.
+const boot = loadPlan({ data: seed, errors: [] }, null);
+const bootPlan = boot.ok ? boot.plan : null;
+const bootErrors: string[] = boot.ok ? [] : boot.errors;
+const bootBase: PlanBase = bootPlan?.base ?? {
+  occupants: seed.occupants ?? [],
+  width: seed.width as number,
+  height: seed.height as number,
+};
 
 /**
  * Describe one view commit as the morph that produced it, capturing the
@@ -40,14 +52,19 @@ function diffToMorph(prev: Occupant[], next: Occupant[]): AppliedMorph | null {
 }
 
 export default function App() {
-  const [occupants, setOccupantsState] = useState<Occupant[]>(() => seed.occupants);
-  const [size, setSize] = useState({ w: seed.width as number, h: seed.height as number });
-  const [errors, setErrors] = useState<string[]>([]);
+  const [occupants, setOccupantsState] = useState<Occupant[]>(() => bootPlan?.occupants ?? seed.occupants);
+  const [size, setSize] = useState(() => ({
+    w: (bootPlan?.width ?? seed.width) as number,
+    h: (bootPlan?.height ?? seed.height) as number,
+  }));
+  const [errors, setErrors] = useState<string[]>(() => bootErrors);
   const [past, setPast] = useState<HistoryStep[]>([]);
   const [future, setFuture] = useState<HistoryStep[]>([]);
-  // Adopted file chain: written back out on save, but never enters the undo
-  // stack, so every undoable step carries its own snapshot and morph together.
-  const [adopted, setAdopted] = useState<AppliedMorph[]>([]);
+  // Base the adopted chain replays over, plus the adopted file chain itself:
+  // both are written back out on save, but neither enters the undo stack, so
+  // every undoable step carries its own snapshot and morph together.
+  const [base, setBase] = useState<PlanBase>(() => bootBase);
+  const [adopted, setAdopted] = useState<AppliedMorph[]>(() => bootPlan?.morphs ?? []);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const dims = { width: size.w, height: size.h };
@@ -58,10 +75,11 @@ export default function App() {
     setOccupantsState(next);
   };
 
-  const reset = (next: Occupant[], w: number, h: number, morphs?: AppliedMorph[]) => {
+  const reset = (next: Occupant[], w: number, h: number, nextBase: PlanBase, morphs: AppliedMorph[]) => {
     setPast([]);
     setFuture([]);
-    setAdopted(morphs ?? []);
+    setBase(nextBase);
+    setAdopted(morphs);
     setOccupantsState(next);
     setSize({ w, h });
     setErrors([]);
@@ -83,9 +101,12 @@ export default function App() {
     setOccupantsState(r.occupants);
   };
 
-  const reloadFile = () => reset(seed.occupants, seed.width, seed.height);
+  const reloadFile = () =>
+    reset(bootPlan?.occupants ?? seed.occupants, (bootPlan?.width ?? seed.width) as number, (bootPlan?.height ?? seed.height) as number, bootBase, bootPlan?.morphs ?? []);
 
   const save = () => {
+    const stepped = past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
+    const morphs = [...adopted, ...stepped];
     const plan = {
       $schema: "paramorphic-plan/1",
       component: "Grid",
@@ -99,11 +120,11 @@ export default function App() {
       turns: seed.ruleSet.turns,
       outcomes: seed.ruleSet.outcomes,
       interpretation: seed.interpretation,
-      ...(() => {
-        const stepped = past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
-        const morphs = [...adopted, ...stepped];
-        return morphs.length > 0 ? { morphs } : {};
-      })(),
+      // The file stays replayable: base + morphs reconstruct the cached
+      // occupants on the next open, verified by loadPlan before anything
+      // is applied.
+      base,
+      morphs,
     };
     const blob = new Blob([JSON.stringify(plan, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -125,7 +146,7 @@ export default function App() {
         setErrors(res.errors);
         return;
       }
-      reset(res.plan.occupants ?? [], res.plan.width, res.plan.height, res.plan.morphs);
+      reset(res.plan.occupants ?? [], res.plan.width, res.plan.height, res.plan.base, res.plan.morphs);
     } catch (e: any) {
       setErrors([`Open error: ${e?.message ?? e}`]);
     }

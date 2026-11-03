@@ -620,5 +620,243 @@
   "outcomes": [],
   "interpretation": {
     "view": "spreadsheet"
-  }
+  },
+  "base": {
+    "occupants": [],
+    "width": 5,
+    "height": 4
+  },
+  "morphs": [
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-0-0",
+          "anchor": {
+            "q": 0,
+            "r": 0
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "value": 10
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-0-1",
+          "anchor": {
+            "q": 0,
+            "r": 1
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "value": 20
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-0-2",
+          "anchor": {
+            "q": 0,
+            "r": 2
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=SUM(A1:A2)"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-0-3",
+          "anchor": {
+            "q": 0,
+            "r": 3
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=A3*2"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-1-0",
+          "anchor": {
+            "q": 1,
+            "r": 0
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "value": 5
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-1-1",
+          "anchor": {
+            "q": 1,
+            "r": 1
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=B1*3"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-1-2",
+          "anchor": {
+            "q": 1,
+            "r": 2
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=A3+B2"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-2-0",
+          "anchor": {
+            "q": 2,
+            "r": 0
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "value": 7
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-2-1",
+          "anchor": {
+            "q": 2,
+            "r": 1
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=AVG(A1:C1)"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-4-0",
+          "anchor": {
+            "q": 4,
+            "r": 0
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=E2+1"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-4-1",
+          "anchor": {
+            "q": 4,
+            "r": 1
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=E1+1"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ]
 }

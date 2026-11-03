@@ -381,12 +381,21 @@ export default function App() {
     markPlanLoad: () => { planLoadRef.current = true; },
   };
 
+  const [planChain, setPlanChain] = useState<string | null>(null);
   const applyLoaded = (res: ReturnType<typeof loadPlan>) => {
-    if (!res.ok) { setPlanErrors(res.errors); return; }
+    if (!res.ok) { setPlanErrors(res.errors); setPlanChain(null); return; }
     try {
       applyPlan(res.plan, planTarget);
+      // Provenance: the replayed chain constructed this state, or the file
+      // was a snapshot with no chain to replay.
+      setPlanChain(
+        res.plan.morphs.length > 0
+          ? `Assembled by replaying ${res.plan.morphs.length} morphs over the stored base (${res.plan.morphs.map(m => m.name).join(", ")}).`
+          : "Snapshot-only plan: no morph chain to replay."
+      );
     } catch (e: any) {
       setPlanErrors([`Apply error: ${e.message}`]);
+      setPlanChain(null);
     }
   };
 
@@ -704,7 +713,8 @@ export default function App() {
                 {planErrors.map((err, i) => <div key={i} className="mt-1">• {err}</div>)}
               </div>
             )}
-            {planErrors.length === 0 && <div className="mt-2 text-[9px] text-[var(--text-faint)]">Edit YAML/XML/JSON, then Load. Validates: unknown tiling, direction not defined in tiling ({tiling.id} has {tiling.directions.map(d => d.name).join(",")}), span collision, missing fields. If valid, plan becomes source of truth and runtime updates.</div>}
+            {planErrors.length === 0 && planChain && <div className="mt-2 text-[9px] text-[var(--accent)]">{planChain}</div>}
+            {planErrors.length === 0 && !planChain && <div className="mt-2 text-[9px] text-[var(--text-faint)]">Edit YAML/XML/JSON, then Load. Validates: unknown tiling, direction not defined in tiling ({tiling.id} has {tiling.directions.map(d => d.name).join(",")}), span collision, missing fields. If valid, plan becomes source of truth and runtime updates.</div>}
           </div>
 
           <div className="panel p-3">

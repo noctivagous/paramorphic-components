@@ -81,7 +81,7 @@
       "data": {
         "thread": "general",
         "author": "ada",
-        "text": "grid, occupants, rules — same kernel as chess",
+        "text": "grid, occupants, rules \u2014 same kernel as chess",
         "ts": 1700000000
       },
       "tags": []
@@ -197,5 +197,132 @@
       "framing": "length-prefix-u32be",
       "note": "transport adapter deferred; this file is the local-first half"
     }
-  }
+  },
+  "base": {
+    "occupants": [],
+    "width": 8,
+    "height": 1
+  },
+  "morphs": [
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "m-0",
+          "anchor": {
+            "q": 0,
+            "r": 0
+          },
+          "span": [],
+          "type": "message",
+          "data": {
+            "thread": "general",
+            "author": "ada",
+            "text": "grid, occupants, rules \u2014 same kernel as chess",
+            "ts": 1700000000
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "m-1",
+          "anchor": {
+            "q": 1,
+            "r": 0
+          },
+          "span": [],
+          "type": "message",
+          "data": {
+            "thread": "general",
+            "author": "grace",
+            "text": "plans are the diff, review the plan not the code",
+            "ts": 1700000060
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "m-2",
+          "anchor": {
+            "q": 2,
+            "r": 0
+          },
+          "span": [],
+          "type": "message",
+          "data": {
+            "thread": "general",
+            "author": "ada",
+            "text": "traversal turns steps into sound",
+            "ts": 1700000120
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "m-3",
+          "anchor": {
+            "q": 3,
+            "r": 0
+          },
+          "span": [],
+          "type": "message",
+          "data": {
+            "thread": "paramorphic",
+            "author": "grace",
+            "text": "spreadsheet is a grid with a formula interpretation",
+            "ts": 1700000180
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "m-4",
+          "anchor": {
+            "q": 4,
+            "r": 0
+          },
+          "span": [],
+          "type": "message",
+          "data": {
+            "thread": "paramorphic",
+            "author": "ada",
+            "text": "chat is threads over framed streams",
+            "ts": 1700000240
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ]
 }
