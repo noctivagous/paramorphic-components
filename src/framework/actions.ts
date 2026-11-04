@@ -8,6 +8,12 @@ export type ActionContext = {
   select?: (target: string) => void | Promise<void>;
   navigate?: (target: string) => void | Promise<void>;
   setState?: (target: string, value: unknown) => void | Promise<void>;
+  newDocument?: (target: string, value?: unknown) => void | Promise<void>;
+  openDocument?: (target: string, value?: unknown) => void | Promise<void>;
+  saveDocument?: (target: string, value?: unknown) => void | Promise<void>;
+  reloadDocument?: (target: string, value?: unknown) => void | Promise<void>;
+  undo?: (target: string, value?: unknown) => void | Promise<void>;
+  redo?: (target: string, value?: unknown) => void | Promise<void>;
   /** App- or platform-provided capabilities for custom operations. */
   capabilities?: Record<string, (target: string | undefined, value: unknown) => void | Promise<void>>;
 };
@@ -39,6 +45,12 @@ export function createActionRegistry() {
   add('storage.useSample', 'useSample');
   add('selection.select', 'select');
   add('navigation.open', 'navigate');
+  add('document.new', 'newDocument');
+  add('document.open', 'openDocument');
+  add('document.save', 'saveDocument');
+  add('document.reload', 'reloadDocument');
+  add('history.undo', 'undo');
+  add('history.redo', 'redo');
   register({ name: 'state.set', validate: a => [...requiredTarget(a), ...(Object.prototype.hasOwnProperty.call(a, 'value') ? [] : ['value is required'])], run: (a, c) => {
     if (!c.setState) throw new Error('Action operation "state.set" is unavailable in this app');
     return c.setState(a.target!, a.value);
@@ -62,9 +74,10 @@ export function createActionRegistry() {
 export type ActionRegistry = ReturnType<typeof createActionRegistry>;
 export const actionRegistry = createActionRegistry();
 
-export async function runAction(id: string, actions: ActionSpec[], context: ActionContext, registry: ActionRegistry = actionRegistry) {
+export async function runAction(id: string, actions: ActionSpec[], context: ActionContext, registry: ActionRegistry = actionRegistry, value?: unknown) {
   const action = actions.find(a => a.id === id);
-  return action ? registry.execute(action, context) : { ok: false as const, errors: [`unknown action "${id}"`] };
+  if (!action) return { ok: false as const, errors: [`unknown action "${id}"`] };
+  return registry.execute(value !== undefined ? { ...action, value } : action, context);
 }
 
 /** Any component can map named events to plan-defined actions. */

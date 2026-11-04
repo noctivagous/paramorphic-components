@@ -6,6 +6,7 @@
 // Formula evaluation stays in the derivation mechanism (`formulas.ts`).
 import type { Occupant } from "./types";
 import { removeOccupant, upsertOccupant } from "./editing";
+import type { SelectionMode } from "./grid-selection";
 
 export type CellPresentationKind = "editableText" | "readOnly" | "eventCard";
 
@@ -30,21 +31,28 @@ export type GridPresentationConfig = {
   cell: CellPresentation;
   headers: GridHeaders;
   editing?: CellEditing;
+  selection?: { mode: SelectionMode };
 };
 
 /** Policies can be combined independently; legacy modes remain loadable. */
 export type CellEditing =
-  | { parse?: "text" | "numberOrText"; expressions?: "none" | "formula"; clear?: "value" | "occupant" }
+  | { parse?: "text" | "numberOrText"; expressions?: "none" | "formula"; clear?: "value" | "occupant"; enter?: "blur" | "down" }
   | { kind: "text" | "spreadsheet" };
 
 export type CellEditingPolicies = {
   parse: "text" | "numberOrText";
   expressions: "none" | "formula";
   clear: "value" | "occupant";
+  enter: "blur" | "down";
 };
 
-const TEXT_POLICIES: CellEditingPolicies = { parse: "text", expressions: "none", clear: "value" };
-const SPREADSHEET_POLICIES: CellEditingPolicies = { parse: "numberOrText", expressions: "formula", clear: "occupant" };
+const TEXT_POLICIES: CellEditingPolicies = { parse: "text", expressions: "none", clear: "value", enter: "blur" };
+const SPREADSHEET_POLICIES: CellEditingPolicies = { parse: "numberOrText", expressions: "formula", clear: "occupant", enter: "down" };
+
+/** Enter moves vertically without leaving the grid at its lower edge. */
+export function enterDestination(q: number, r: number, height: number): { q: number; r: number } {
+  return { q, r: Math.min(r + 1, height - 1) };
+}
 
 /** Normalize legacy plans and fill defaults for independently chosen policies. */
 export function editingPolicies(config?: GridPresentationConfig): CellEditingPolicies {
@@ -91,16 +99,18 @@ export function validatePresentationConfig(cfg: unknown): string[] {
     if (new Set(bindings).size !== bindings.length) errors.push("interpretation.grid.cell bindings must be distinct");
   }
   const editing = cfg.editing;
+  if (cfg.selection !== undefined && (!isRecord(cfg.selection) || !['single', 'range', 'multiple'].includes(String(cfg.selection.mode)))) errors.push('interpretation.grid.selection.mode must be single, range, or multiple');
   if (editing !== undefined) {
     if (!isRecord(editing)) errors.push("interpretation.grid.editing must be an object");
     else {
-      const allowed = ["kind", "parse", "expressions", "clear"];
+      const allowed = ["kind", "parse", "expressions", "clear", "enter"];
       for (const key of Object.keys(editing)) if (!allowed.includes(key)) errors.push(`unknown editing policy "${key}"`);
       if (editing.kind !== undefined && editing.kind !== "text" && editing.kind !== "spreadsheet") errors.push("interpretation.grid.editing.kind must be text or spreadsheet");
-      if (editing.kind !== undefined && (editing.parse !== undefined || editing.expressions !== undefined || editing.clear !== undefined)) errors.push("legacy editing.kind cannot be combined with editing policies");
+      if (editing.kind !== undefined && (editing.parse !== undefined || editing.expressions !== undefined || editing.clear !== undefined || editing.enter !== undefined)) errors.push("legacy editing.kind cannot be combined with editing policies");
       if (editing.parse !== undefined && editing.parse !== "text" && editing.parse !== "numberOrText") errors.push("editing.parse must be text or numberOrText");
       if (editing.expressions !== undefined && editing.expressions !== "none" && editing.expressions !== "formula") errors.push("editing.expressions must be none or formula");
       if (editing.clear !== undefined && editing.clear !== "value" && editing.clear !== "occupant") errors.push("editing.clear must be value or occupant");
+      if (editing.enter !== undefined && editing.enter !== "blur" && editing.enter !== "down") errors.push("editing.enter must be blur or down");
     }
   }
   const formulasEnabled = isRecord(editing) ? editing.kind === "spreadsheet" || editing.expressions === "formula" : editing === undefined && isRecord(cell) && cell.formula !== undefined;

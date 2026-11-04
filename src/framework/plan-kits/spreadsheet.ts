@@ -54,7 +54,8 @@ export const spreadsheetRecipe: PlanRecipe<SpreadsheetRecipeParams> = {
       regions: [], occupants,
       interpretation: { view: "spreadsheet", grid: {
         cell: { kind: "editableText", value: "data.value", ...(formulas ? { formula: "data.formula", computed: "data.computed" } : {}) },
-        editing: { parse: "numberOrText", expressions: formulas ? "formula" : "none", clear: "occupant" },
+        editing: { parse: "numberOrText", expressions: formulas ? "formula" : "none", clear: "occupant", enter: "down" },
+        selection: { mode: "range" },
         headers: { columns: "letters", rows: "numbers" },
       } },
       base: { occupants: [], width, height },

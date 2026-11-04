@@ -14,6 +14,7 @@ export * from "./rule-sets";
 export * from "./rule-chains";
 export * from "./traversal";
 export * from "./editing";
+export * from "./grid-selection";
 export * from "./derivation";
 export * from "./morphs/formulas";
 export * from "./morphs/framing";

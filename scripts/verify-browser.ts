@@ -4,11 +4,11 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { appKit, loadShellPlan, shellPlanFromState, shellRegistry, type ShellPlanFile } from '../src/framework/app-kit/plans';
 import { createActionRegistry, dispatchActionEvent, runAction, validateActionBindings } from '../src/framework/actions';
-import { AppDialog, AppMenubar, AppToolbar } from '../src/framework/app-kit/Chrome';
+import { AppDialog, AppMenubar, AppShell, AppToolbar, controlDisabled, shortcutMatches } from '../src/framework/app-kit/Chrome';
 import { children, chooseLocalAdapter, createSampleAdapter } from '../src/framework/app-kit/browser';
 (globalThis as any).File = File;
 async function main() {
-  for (const id of ['sidebar', 'split', 'columns', 'browser']) {
+  for (const id of ['workspace', 'sidebar', 'split', 'columns', 'browser', 'spreadsheet']) {
     const result = appKit.instantiate(id, { title: id });
     assert(result.ok);
     assert(loadShellPlan(JSON.parse(JSON.stringify(result.data))).ok);
@@ -85,6 +85,32 @@ async function main() {
   assert.equal(await (await local.read(entries[0])).text(), 'hello');
   (globalThis as any).window = {};
   await assert.rejects(chooseLocalAdapter(), /not supported/);
+  const workspace = appKit.instantiate('workspace', { title: 'One' });
+  assert(workspace.ok && workspace.plan.layout === 'workspace' && workspace.plan.slots.length === 1);
+  assert(!loadShellPlan({ schema: 'paramorphic-shell/1', layout: 'workspace', title: 'One', slots: ['a', 'b'], widths: [1, 1] }).ok);
+  const sheet = appKit.instantiate('spreadsheet', { title: 'Spreadsheet' });
+  assert(sheet.ok);
+  const sheetFile = JSON.parse(JSON.stringify(sheet.data)) as ShellPlanFile;
+  assert.deepEqual(sheetFile.morphs.map(m => m.name), ['shell.title', 'shell.layout', 'shell.menus', 'shell.toolbar', 'shell.dialogs', 'shell.actions', 'shell.status']);
+  assert(loadShellPlan(sheetFile).ok);
+  assert(sheet.plan.dialogs?.some(d => d.id === 'new' && d.fields?.length === 3 && d.submit === 'create'));
+  assert((await runAction('save', sheet.plan.actions!, { saveDocument: target => { invoked = target; } })).ok && invoked === 'sheet');
+  assert((await runAction('create', sheet.plan.actions!, { newDocument: (_t, value) => { invoked = JSON.stringify(value); } }, undefined, { width: 8, height: 6, formulas: false })).ok);
+  assert.equal(invoked, JSON.stringify({ width: 8, height: 6, formulas: false }));
+  assert(!(await runAction('undo', sheet.plan.actions!, {})).ok);
+  assert(!loadShellPlan({ ...sheet.plan, dialogs: [{ id: 'new', title: 'N', message: '', fields: [{ id: 'x', label: 'X', type: 'nope' }] }] } as object).ok);
+  assert(!loadShellPlan({ ...sheet.plan, dialogs: sheet.plan.dialogs?.map(d => d.id === 'new' ? { ...d, submit: 'missing' } : d) }).ok);
+  assert(!loadShellPlan({ ...browser.plan, menus: [{ id: 'file', label: 'File', items: [{ id: 'x', label: 'X', shortcut: '' }] }] }).ok);
+  assert(shortcutMatches('Mod+S', { key: 's', code: 'KeyS', metaKey: true, ctrlKey: false, shiftKey: false, altKey: false }));
+  assert(shortcutMatches('Mod+Shift+Z', { key: 'z', code: 'KeyZ', metaKey: false, ctrlKey: true, shiftKey: true, altKey: false }));
+  assert(!shortcutMatches('Mod+S', { key: 's', code: 'KeyS', metaKey: true, ctrlKey: false, shiftKey: true, altKey: false }));
+  assert(controlDisabled({ id: 'undo', label: 'Undo' }, { undo: false }));
+  assert(!controlDisabled({ id: 'undo', label: 'Undo' }, { undo: true }));
+  const chrome = renderToStaticMarkup(React.createElement(AppShell, { plan: sheet.plan, slots: { inspector: 'Info', sheet: 'Grid' }, availability: { undo: false, redo: false } }));
+  assert(chrome.includes('Spreadsheet') && chrome.includes('aria-label="inspector"') && chrome.includes('Application status') && chrome.includes('Size') && chrome.includes('New'));
+  assert.equal(sheet.plan.menus?.find(m => m.id === 'file')?.items[0].shortcut, 'Mod+N');
+  const form = renderToStaticMarkup(React.createElement(AppDialog, { open: false, title: 'New sheet', onClose: () => {}, fields: sheet.plan.dialogs!.find(d => d.id === 'new')!.fields, submitLabel: 'Create', children: 'Choose size' }));
+  assert(form.includes('Columns') && form.includes('Create') && form.includes('Formulas'));
   console.log('Browser kit checks passed');
 }
 main().catch(e => { console.error(e); process.exitCode = 1; });

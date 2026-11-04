@@ -8,7 +8,7 @@ export function GridLayout({ plan, slots }: { plan: ShellPlan; slots: Record<str
   return <div>
     {plan.layout === 'split' && <label>Panel size <input aria-label="Panel size" type="range" min="15" max="85" value={split} onChange={e => setSplit(Number(e.target.value))} /></label>}
     <div style={{ display: 'grid', gridTemplateColumns: widths.map(n => `minmax(0, ${n}fr)`).join(' '), gap: 8, overflowX: 'auto', minWidth: 0 }}>
-      {plan.slots.map(name => <section key={name} aria-label={name} style={{ minWidth: 0, border: '1px solid var(--border)', padding: 8 }}>{slots[name]}</section>)}
+      {plan.slots.map(name => <section key={name} aria-label={name} className="panel" style={{ minWidth: 0, minHeight: 120, padding: 8 }}>{slots[name]}</section>)}
     </div>
   </div>;
 }

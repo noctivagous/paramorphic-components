@@ -60,6 +60,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 `createTilingGeometry` exposes neighbors, normalized cell/point conversion, rotation, and distance for existing square and hex tilings. Exhaustive bounded checks cover symmetry, round trips, rotation order and inverse, and neighbor distance. Shared turn helpers enforce ownership and advance turns for placement and movement, including `samePlayerIfCapture`. `lint:rules` rejects direct `ruleSet.id` branches; it does not detect aliases or indirect checks. The requested morphable rules vocabulary, complete game plans, and full game acceptance tests remain open; current Chess and Checkers presets are simplified demos.
 
+### 2026-11-03 — Spreadsheet on the app-kit shell
+
+The spreadsheet boots through `AppShell` from the `spreadsheet` app-kit recipe (sidebar inspector + sheet, File/Edit/Help, toolbar, New-sheet field dialog, status). New kit pieces: `workspace` layout, `shell.status`, dialog fields/submit, menu shortcuts, document/history actions, and availability-aware chrome. Sheet data, undo, and save/open still use the Grid plan and `buildSheetSave`. `verify:browser` covers the recipe, morph chain, form dialog, shortcuts, and document actions.
+
 ### 2026-11-04 — Reusable plan inventory
 
 Added a scoped recipe inventory and a spreadsheet recipe with dimensions, formula choice, and optional initial cells. Recipes generate ordinary validated, replayable plans; custom inventories can use another plan loader, and direct plan loading remains available. The spreadsheet shell can create a new sheet from the recipe. More recipes and app-kit composition remain future work.

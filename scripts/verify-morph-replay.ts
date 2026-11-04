@@ -35,7 +35,7 @@ import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
 import { createPlanInventory } from "../src/framework/plan-inventory";
 import { planInventory } from "../src/framework/plan-kits";
-import { colName, commitCellText, errorIdsFor, resolveBinding } from "../src/framework/presentations";
+import { colName, commitCellText, editingPolicies, enterDestination, errorIdsFor, resolveBinding } from "../src/framework/presentations";
 import { derivePresentedCells } from "../src/framework/morphs/formulas";
 import { GridViewport, mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
 import { getTiling } from "../src/framework/tilings";
@@ -1059,7 +1059,13 @@ for (const f of files) {
   if (sfirst.ok) {
     check("spreadsheet configures editableText",
       (sdata.interpretation as any)?.grid?.cell?.kind === "editableText");
+    check("spreadsheet Enter moves down", editingPolicies(sdata.interpretation.grid).enter === 'down');
   }
+  check("Enter moves down in the same column", enterDestination(2, 1, 4).q === 2 && enterDestination(2, 1, 4).r === 2);
+  check("Enter stays on the last row", enterDestination(2, 3, 4).r === 3);
+  check("unconfigured text editing keeps blur behavior", editingPolicies({ cell: { kind: 'editableText', value: 'data.label' }, headers: { columns: 'none', rows: 'none' } }).enter === 'blur');
+  const badEnter = { ...sdata, interpretation: { ...sdata.interpretation, grid: { ...sdata.interpretation.grid, editing: { ...sdata.interpretation.grid.editing, enter: 'sideways' } } } };
+  check("unknown Enter policy rejected", !loadPlan({ data: badEnter, errors: [] }, null).ok);
   const cdata = JSON.parse(readFileSync("morph-plans/calendar.json", "utf8"));
   const cfirst = loadPlan({ data: cdata, errors: [] }, null);
   check("calendar proof plan loads", cfirst.ok, cfirst.ok ? "" : cfirst.errors.join("; "));

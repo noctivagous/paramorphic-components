@@ -56,7 +56,9 @@ Here’s a working vocabulary for this project. Some terms describe capabilities
 
 The key distinction is: a component provides the structure; a vocabulary describes ways to change it; the registry and runtime carry out those changes; a plan records the intended construction.
 
-Grid plans configure cell presentations, `data.<field>` bindings, and editing policies separately in `interpretation.grid`. A plan can choose text or number-or-text parsing, enable formulas, and decide whether clearing removes the bound value or the whole occupant. The spreadsheet combines number-or-text parsing, formulas, and occupant clearing; its formulas use the configured value, formula, and computed fields. Existing `text` and `spreadsheet` editing modes and plans with formula bindings remain supported. Date parsing is not implemented. Calendar event cards remain read-only; calendar navigation and editing are not yet a complete app.
+Grid plans configure cell presentations, `data.<field>` bindings, editing policies, and selection separately in `interpretation.grid`. A plan can choose text or number-or-text parsing, enable formulas, decide whether clearing removes the bound value or the whole occupant, and configure Enter to move down or leave the cell. The spreadsheet combines number-or-text parsing, formulas, occupant clearing, moving down on Enter, and rectangular selection; its formulas use the configured value, formula, and computed fields. Existing `text` and `spreadsheet` editing modes and plans with formula bindings remain supported. Date parsing is not implemented. Calendar event cards remain read-only; calendar navigation and editing are not yet a complete app.
+
+The shared Grid selection model supports a single cell, one rectangular range, or multiple ranges. In editable Grid presentations, clicking selects a cell, dragging or Shift-clicking extends a range, and Shift-arrow keys extend it from the keyboard. In multiple-range mode, Ctrl-click or Command-click adds a range. The spreadsheet currently uses one range. Selection is transient interface state, separate from the plan's cell data and morph history; selection interaction is not yet wired to read-only or board presentations.
 
 For example, this editing configuration enables numeric cells without formulas and preserves an occupant's other data when its value is cleared:
 
@@ -76,10 +78,12 @@ apps/spreadsheet/
 │   └── spreadsheet.json     # Configuration, base, and morph chain
 └── src/
     ├── main.tsx             # Starts the app
-    ├── App.tsx              # App shell: menus, history, save/open
+    ├── App.tsx              # Host: sheet state, formula bar, inspector content
     ├── plans.ts             # Makes the app's plans available
     └── save.ts              # App settings for the shared save helper
 ```
+
+The spreadsheet window itself is an app-kit shell: menus, toolbar, dialogs, shortcuts, and status are replayed from a `spreadsheet` shell recipe (`shell.*` morphs). The sheet grid is still the Grid plan in `spreadsheet.json`.
 
 It uses shared pieces from elsewhere in the project:
 
@@ -88,6 +92,7 @@ src/
 ├── framework/
 │   ├── components/
 │   │   └── GridViewport.tsx # Shared Grid renderer (boards, keyboards, sheets)
+│   ├── app-kit/             # Shell recipes, AppShell chrome, layout
 │   ├── morphs/              # Registry, shared machinery, and vocabularies
 │   ├── plan.ts              # Plan loading, validation, and replay
 │   ├── history.ts           # Undo and redo machinery
@@ -118,11 +123,11 @@ if (result.ok) {
 }
 ```
 
-`planInventory.list()` describes available recipes and their parameters. The spreadsheet app can create a new blank sheet from the recipe. Generated plans are independent files: they can be edited, saved, and loaded without the inventory, and applications can still author plans directly. `createPlanInventory()` creates a separate catalog for custom recipes; pass a loader to support a different plan type. The inventory currently ships one spreadsheet recipe, not a complete app kit.
+`planInventory.list()` describes available recipes and their parameters. The spreadsheet app can create a new blank sheet from the recipe. Generated plans are independent files: they can be edited, saved, and loaded without the inventory, and applications can still author plans directly. `createPlanInventory()` creates a separate catalog for custom recipes; pass a loader to support a different plan type. The inventory currently ships one spreadsheet Grid recipe. Window chrome lives in the app-kit inventory.
 
-The separate `appKit` inventory supplies sidebar, split, columns, and browser shell recipes. Each produces a versioned base and morph chain that configures the layout, title, menus, toolbar, dialogs, and actions; `loadShellPlan` validates and replays it. Snapshot-only shell descriptions remain loadable. `GridLayout` hosts named panel content. The file-browser example (`npm run dev:browser`) uses a Tree of folder and file entries with a three-column Grid layout. It starts with sample data and can browse a user-selected local folder in browsers that support directory access. It previews text and images and is read-only. The browser is an initial composition example; it does not yet implement the full hosting contract or arbitrary filesystem access.
+The separate `appKit` inventory supplies workspace, sidebar, split, columns, browser, and spreadsheet shell recipes. Each produces a versioned base and morph chain that configures the layout, title, menus, toolbar, dialogs, actions, and status; `loadShellPlan` validates and replays it. Snapshot-only shell descriptions remain loadable. Dialogs may declare fields and a submit action. `GridLayout` hosts named panel content. `AppShell` renders the plan as a window: menubar, toolbar, dialogs, shortcuts, layout, notices, and status. The spreadsheet app uses that shell with an inspector plus sheet. The file-browser example (`npm run dev:browser`) uses a Tree of folder and file entries with a three-column Grid layout. It starts with sample data and can browse a user-selected local folder in browsers that support directory access. It previews text and images and is read-only. The browser is an initial composition example; it does not yet implement the full hosting contract or arbitrary filesystem access.
 
-Actions are framework functionality (`src/framework/actions.ts`), not specific to the app kit. A plan can name an operation and its target, and a component can bind an event to that action. The runtime looks up a registered operation and invokes capabilities supplied by the host; it does not execute code from the plan. The browser shell uses actions for its menus and toolbar. Other components can use `dispatchActionEvent` with their own event bindings. Apps can register custom operations in a scoped action registry; the same registry must be supplied when validating and executing their plans. Most existing Grid views still use their own event handlers and have not yet adopted these bindings.
+Actions are framework functionality (`src/framework/actions.ts`), not specific to the app kit. A plan can name an operation and its target, and a component can bind an event to that action. The runtime looks up a registered operation and invokes capabilities supplied by the host; it does not execute code from the plan. Shared operations include dialogs, storage, selection, navigation, document new/open/save/reload, and undo/redo. The spreadsheet and browser shells use actions for their menus and toolbar. Other components can use `dispatchActionEvent` with their own event bindings. Apps can register custom operations in a scoped action registry; the same registry must be supplied when validating and executing their plans. Most existing Grid views still use their own event handlers and have not yet adopted these bindings.
 
 For example, a shell's `shell.actions` morph can add `{ "id": "about", "do": "dialog.open", "target": "about" }`. A menu item refers to that action by its `action` field (or its own `id` when omitted). Shell loading checks action operations and dialog references; capability availability and non-dialog targets are checked by the host when the action runs.
 
@@ -131,7 +136,7 @@ For example, a shell's `shell.actions` morph can add `{ "id": "about", "do": "di
 
 We have a working prototype of the foundation, with standalone spreadsheet, sequencer, keyboard, and file-browser demos.
 
-The first three share Grid state, morph registration, replay, and undo machinery. The keyboard uses the shared Grid renderer for wide keys and staggered rows. The file browser combines a Grid layout with a separate Tree state and a read-only storage adapter; its shell configuration is replayed from morphs.
+The first three share Grid state, morph registration, replay, and undo machinery. The keyboard uses the shared Grid renderer for wide keys and staggered rows. The spreadsheet window is an app-kit shell (menus, toolbar, dialogs, shortcuts, status) around the shared Grid renderer. The file browser combines a Grid layout with a separate Tree state and a read-only storage adapter; its shell configuration is replayed from morphs.
 
 The larger vision is still ahead: plans configure parts of these apps, but custom code still supplies much of their behavior. Tree and the other component families aren’t yet demonstrated in complete apps, and we haven’t measured whether AI can reliably assemble varied interfaces faster from plans.
 
@@ -527,7 +532,7 @@ apps/spreadsheet/
   index.html            # entry; mounts src/main.tsx
   vite.config.ts        # root is this dir; server.fs.allow reaches the shared src/
   src/main.tsx          # mounts App, imports shared ../../src/index.css
-  src/App.tsx           # thin shell: menubar, undo history, save/open
+  src/App.tsx           # host: sheet state, formula bar, inspector; chrome from AppShell
   src/plans.ts          # registry of this app's morph-plans
   morph-plans/*.json    # app configuration; validated by loadPlan on use
 ```

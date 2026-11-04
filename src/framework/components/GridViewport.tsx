@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Axial, LogicTriple, MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, TilingDir, Toggles } from "../types";
 import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
 import { buildOccupancyMap, getOccupiedCells, isCellOccupied, occupantAtCell } from "../occupancy";
 import { makeId } from "../tilings";
 import { applyPromotion, applySurroundCapture, canActOn, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, nextTurn, promotionOptions, promotionSymbol, ruleHasSurroundCapture } from "../engine";
-import { colName, editingPolicies, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
+import { colName, editingPolicies, enterDestination, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
+import { cellIsSelected, clampGridSelection, initialGridSelection, selectGridCell, selectedCellCount, type GridSelection, type SelectionMode } from "../grid-selection";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
 
@@ -69,6 +70,10 @@ export type GridViewportProps = {
   derivedErrors?: string[];
   /** Text commit from a presentation cell; shell maps it to occupant edits. */
   onCellCommit?: (q: number, r: number, text: string) => void;
+  /** Focus on a presentation cell, for formula bars and inspectors. */
+  onCellFocus?: (q: number, r: number) => void;
+  selectionMode?: SelectionMode;
+  onSelectionChange?: (selection: GridSelection) => void;
   /** Help line under a presentation table. */
   presentationHint?: string;
   tiling: TilingDef;
@@ -116,9 +121,37 @@ export function GridViewport({
   occupants, setOccupants, tiling, ruleSet, width, height, toggles, selectedId, setSelectedId, validMoves, setValidMoves,
   currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo,
   mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap,
-  presentation, headers, editing, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint
+  presentation, headers, editing, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint, onCellFocus, selectionMode, onSelectionChange
 }: GridViewportProps) {
   const cellSize = tiling.shape === "square" ? 44 : 40;
+  const [selection, setSelection] = useState<GridSelection>(initialGridSelection);
+  const selectionRef = useRef(selection);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const pointer = useRef<{ dragged: boolean } | null>(null);
+  const preserveFocusSelection = useRef(false);
+  const updateSelection = (next: GridSelection) => {
+    selectionRef.current = next;
+    setSelection(next);
+    onSelectionChange?.(next);
+  };
+  useEffect(() => {
+    const next = clampGridSelection(selectionRef.current, Math.max(1, width), Math.max(1, height));
+    selectionRef.current = next;
+    setSelection(next);
+  }, [width, height]);
+  useEffect(() => {
+    const finish = () => {
+      const wasDragging = pointer.current?.dragged;
+      pointer.current = null;
+      if (!wasDragging) return;
+      const { active } = selectionRef.current.ranges[selectionRef.current.activeRange];
+      const target = tableRef.current?.querySelector<HTMLInputElement>(`input[data-grid-q="${active.q}"][data-grid-r="${active.r}"]`);
+      if (target && document.activeElement !== target) { preserveFocusSelection.current = true; target.focus(); }
+    };
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    return () => { window.removeEventListener('pointerup', finish); window.removeEventListener('pointercancel', finish); };
+  }, []);
 
   const mapOccupant = useMemo(() => {
     const m = new Map<string, Occupant>();
@@ -382,7 +415,8 @@ export function GridViewport({
   // plus bound cells instead of the game board. Game rendering below is
   // untouched when no presentation is configured.
   if (presentation) {
-    const expressions = editingPolicies({ cell: presentation, headers: headers ?? { columns: "none", rows: "none" }, editing }).expressions;
+    const policies = editingPolicies({ cell: presentation, headers: headers ?? { columns: "none", rows: "none" }, editing });
+    const expressions = policies.expressions;
     const shown = derivedOccupants ?? occupants;
     const byKey = new Map<string, Occupant>();
     for (const o of shown) byKey.set(`${o.anchor.q},${o.anchor.r}`, o);
@@ -411,7 +445,7 @@ export function GridViewport({
     const rows = Array.from({ length: height }, (_, r) => r);
     return (
       <div>
-        <table className="border-collapse">
+        <table ref={tableRef} className="border-collapse" role={selectionMode ? "grid" : undefined} aria-label={selectionMode ? "Cell grid" : undefined}>
           {showCols && (
             <thead>
               <tr>
@@ -445,20 +479,62 @@ export function GridViewport({
                       </td>
                     );
                   }
+                  const selected = !!selectionMode && cellIsSelected(selection, { q, r });
                   return (
-                    <td key={q} className="p-0 border border-[var(--border)]">
+                    <td key={q} role={selectionMode ? "gridcell" : undefined} aria-selected={selectionMode ? selected : undefined} className="p-0 border border-[var(--border)]" style={selected ? { boxShadow: 'inset 0 0 0 2px var(--accent)' } : undefined}>
                       <input
                         key={`${o?.id ?? `empty-${q}-${r}`}:${String(display)}`}
+                        data-grid-q={q}
+                        data-grid-r={r}
                         defaultValue={formula ?? String(display)}
                         spellCheck={false}
+                        onPointerDown={e => {
+                          if (!selectionMode || e.button !== 0) return;
+                          pointer.current = { dragged: false };
+                          const intent = e.shiftKey ? 'extend' : e.ctrlKey || e.metaKey ? 'add' : 'replace';
+                          updateSelection(selectGridCell(selectionRef.current, { q, r }, width, height, selectionMode, intent));
+                        }}
+                        onPointerEnter={e => {
+                          if (!selectionMode || selectionMode === 'single' || !pointer.current || !(e.buttons & 1)) return;
+                          pointer.current.dragged = true;
+                          updateSelection(selectGridCell(selectionRef.current, { q, r }, width, height, selectionMode, 'extend'));
+                        }}
+                        onFocus={() => {
+                          if (selectionMode && !pointer.current && !preserveFocusSelection.current) updateSelection(selectGridCell(selectionRef.current, { q, r }, width, height, selectionMode));
+                          preserveFocusSelection.current = false;
+                          onCellFocus?.(q, r);
+                        }}
                         onBlur={e => {
                           if (e.target.value !== (formula ?? String(display))) onCellCommit(q, r, e.target.value);
                         }}
                         onKeyDown={e => {
-                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                          if (e.nativeEvent.isComposing) return;
+                          if (selectionMode && selectionMode !== 'single' && e.shiftKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                            e.preventDefault();
+                            const d = e.key === 'ArrowUp' ? { q: 0, r: -1 } : e.key === 'ArrowDown' ? { q: 0, r: 1 } : e.key === 'ArrowLeft' ? { q: -1, r: 0 } : { q: 1, r: 0 };
+                            const next = selectGridCell(selectionRef.current, { q: q + d.q, r: r + d.r }, width, height, selectionMode, 'extend');
+                            updateSelection(next);
+                            const active = next.ranges[next.activeRange].active;
+                            const target = tableRef.current?.querySelector<HTMLInputElement>(`input[data-grid-q="${active.q}"][data-grid-r="${active.r}"]`);
+                            if (target && target !== e.currentTarget) { preserveFocusSelection.current = true; target.focus(); }
+                            return;
+                          }
+                          if (e.key !== "Enter") return;
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const table = input.closest('table');
+                          const destination = enterDestination(q, r, height);
+                          input.blur(); // Commit once through the existing blur handler.
+                          if (policies.enter === 'down' && table) {
+                            requestAnimationFrame(() => {
+                              // Do not steal focus if the user moved elsewhere after Enter.
+                              if (document.activeElement !== document.body && document.activeElement !== input) return;
+                              table.querySelector<HTMLInputElement>(`input[data-grid-q="${destination.q}"][data-grid-r="${destination.r}"]`)?.focus();
+                            });
+                          }
                         }}
                         title={formula ? `${colName(q)}${r + 1}: ${formula}` : `${colName(q)}${r + 1}`}
-                        className={`w-full px-1 py-1 bg-[var(--bg-3)] text-[11px] outline-none focus:bg-[var(--bg-4)] ${
+                        className={`w-full px-1 py-1 ${selected ? 'bg-[rgba(232,255,82,0.14)]' : 'bg-[var(--bg-3)]'} text-[11px] outline-none focus:bg-[var(--bg-4)] ${
                           formula ? "text-[var(--accent)]" : "text-[var(--text)]"
                         } ${err ? "text-[#ff8a6b]" : ""}`}
                       />
@@ -469,6 +545,7 @@ export function GridViewport({
             ))}
           </tbody>
         </table>
+        {selectionMode && <div aria-live="polite" className="mt-1 text-[9px] text-[var(--text-dim)]">{selectedCellCount(selection, width, height)} selected</div>}
         {(derivedErrors ?? []).length > 0 && (
           <div className="mt-2 p-2 rounded-[8px] bg-[rgba(90,255,140,0.06)] border border-[var(--border)] text-[9px] text-[var(--text-dim)]">
             <div className="font-bold text-[#ff8a6b]">SHEET ERRORS</div>

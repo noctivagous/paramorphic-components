@@ -619,6 +619,7 @@ export default function App() {
                 presentation={(interpretation as any)?.grid?.cell}
                 headers={(interpretation as any)?.grid?.headers}
                 editing={(interpretation as any)?.grid?.editing}
+                selectionMode={(interpretation as any)?.grid?.selection?.mode ?? "range"}
                 derivedOccupants={sheetDerived.occupants}
                 derivedErrorIds={sheetErrorIds}
                 derivedErrors={sheetDerived.errors}
