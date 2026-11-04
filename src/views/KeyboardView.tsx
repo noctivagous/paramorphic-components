@@ -14,16 +14,39 @@ const KEY_W = 44;
 const KEY_H = 44;
 const GAP = 4;
 
-// View-only stagger per row (px). State keeps dense anchors; the offset only
-// renders the familiar QWERTY shift. Indexed by row, extras reuse the last.
-const STAGGER = [0, 10, 20, 30, 48];
-
-function staggerFor(r: number): number {
-  return STAGGER[Math.min(r, STAGGER.length - 1)];
-}
+// Planned row offsets live in `interpretation.keyboard.stagger` (see
+// `staggerForRow`); the component only falls back to DEFAULT_STAGGER.
 
 function cellsOfKey(o: Occupant): { q: number; r: number }[] {
   return cellsOf(o);
+}
+
+export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
+
+/**
+ * Slot-accurate row layout: every column 0..width-1 appears, so empty
+ * positions between keys (e.g. the gap before Space) render as gaps instead
+ * of collapsing. Covered span cells are marked, not duplicated — the anchor
+ * button already spans their width.
+ */
+export function slotsForRow(occupants: Occupant[], width: number, r: number): KeySlot[] {
+  const byCell = new Map<string, Occupant>();
+  for (const o of occupants) for (const c of cellsOfKey(o)) byCell.set(`${c.q},${c.r}`, o);
+  return Array.from({ length: width }, (_, q) => {
+    const occ = byCell.get(`${q},${r}`) ?? null;
+    if (!occ) return { q, key: null, covered: false };
+    const isAnchor = occ.anchor.q === q && occ.anchor.r === r;
+    return { q, key: occ, covered: !isAnchor };
+  });
+}
+
+/** Fallback stagger when the plan carries no keyboard offsets. */
+export const DEFAULT_STAGGER = [0, 10, 20, 30, 48];
+
+/** Row offset in px, read from the plan (`interpretation.keyboard.stagger`). */
+export function staggerForRow(r: number, stagger: number[] | undefined): number {
+  const list = Array.isArray(stagger) && stagger.length > 0 ? stagger : DEFAULT_STAGGER;
+  return list[Math.min(r, list.length - 1)] ?? 0;
 }
 
 export function KeyboardView({
@@ -31,11 +54,13 @@ export function KeyboardView({
   setOccupants,
   width,
   height,
+  stagger,
 }: {
   occupants: Occupant[];
   setOccupants: (o: Occupant[]) => void;
   width: number;
   height: number;
+  stagger?: number[];
 }) {
   const [edit, setEdit] = useState(false);
   const [pressed, setPressed] = useState<string | null>(null);
@@ -48,15 +73,6 @@ export function KeyboardView({
     for (const o of occupants) for (const c of cellsOfKey(o)) m.set(`${c.q},${c.r}`, o);
     return m;
   }, [occupants]);
-
-  const anchorsByRow = useMemo(() => {
-    const rows: Occupant[][] = Array.from({ length: height }, () => []);
-    for (const o of occupants) {
-      if (o.anchor.r >= 0 && o.anchor.r < height) rows[o.anchor.r].push(o);
-    }
-    for (const row of rows) row.sort((a, b) => a.anchor.q - b.anchor.q);
-    return rows;
-  }, [occupants, height]);
 
   const tone = (freq: number) => {
     try {
@@ -113,7 +129,7 @@ export function KeyboardView({
       </div>
       <div className="flex flex-col gap-[4px]">
         {Array.from({ length: height }, (_, r) => (
-          <div key={r} className="flex gap-[4px]" style={{ marginLeft: staggerFor(r) }}>
+          <div key={r} className="flex gap-[4px]" style={{ marginLeft: staggerForRow(r, stagger) }}>
             {edit
               ? // Edit mode renders every slot so empty cells are clickable.
                 Array.from({ length: width }, (_, q) => {
@@ -147,9 +163,15 @@ export function KeyboardView({
                     </button>
                   );
                 })
-              : // Play mode renders anchor keys only; span width shows size,
-                // row margin shows stagger.
-                anchorsByRow[r].map(o => {
+              : // Play mode renders every slot: anchors press, empty cells
+                // hold their position as gaps, covered span cells collapse
+                // into the anchor button's width.
+                slotsForRow(occupants, width, r).map(slot => {
+                  if (slot.covered) return null;
+                  if (!slot.key) {
+                    return <div key={`gap-${slot.q}`} style={{ width: KEY_W, height: KEY_H }} />;
+                  }
+                  const o = slot.key;
                   const w = (o.span.length + 1) * KEY_W + o.span.length * GAP - GAP;
                   const hot = pressed === o.id;
                   return (
@@ -162,7 +184,7 @@ export function KeyboardView({
                           ? "bg-[var(--accent)] text-black border-[var(--accent)]"
                           : "bg-[var(--bg-3)] border-[var(--border)]"
                       }`}
-                      style={{ width: w, height: KEY_H }}
+                      style={{ width: w, height: KEY_H, flexShrink: 0 }}
                     >
                       {(o.data as any)?.label ?? o.id}
                     </button>

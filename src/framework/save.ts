@@ -25,7 +25,7 @@ export function buildAppSave(args: {
   adopted: AppliedMorph[];
   past: HistoryStep[];
   extra?: Record<string, unknown>;
-}): { plan: any; checkpointed: boolean } {
+}): { ok: true; plan: any; checkpointed: boolean } | { ok: false; errors: string[] } {
   const stepped = args.past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
   const saved = chainForSave(
     args.base,
@@ -34,7 +34,9 @@ export function buildAppSave(args: {
     args.size.w,
     args.size.h
   );
+  if (!saved.ok) return saved;
   return {
+    ok: true,
     checkpointed: saved.checkpointed,
     plan: {
       $schema: "paramorphic-plan/1",

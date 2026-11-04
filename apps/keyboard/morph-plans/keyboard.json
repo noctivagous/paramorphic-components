@@ -795,7 +795,16 @@
   },
   "outcomes": [],
   "interpretation": {
-    "view": "keyboard"
+    "view": "keyboard",
+    "keyboard": {
+      "stagger": [
+        0,
+        12,
+        24,
+        36,
+        48
+      ]
+    }
   },
   "base": {
     "occupants": [],

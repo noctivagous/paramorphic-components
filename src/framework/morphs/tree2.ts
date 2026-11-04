@@ -231,7 +231,9 @@ export function chainForTreeSave(
     return { ok: false, errors: currentErrors.map(e => `current.${e}`) };
   }
   const chainValid = Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0;
-  const replayed = chainValid
+  // Guard the replay on a valid base: cloning an invalid base throws, and a
+  // valid current state must checkpoint instead of throwing.
+  const replayed = baseOk && chainValid
     ? treeRegistry.replayMorphsChecked(base, chain, {}, cloneTreeState)
     : ({ ok: false, errors: [] } as const);
   const matches = replayed.ok && treeNodesEqual(replayed.state, current) === null;

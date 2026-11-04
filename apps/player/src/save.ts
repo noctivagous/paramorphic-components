@@ -30,6 +30,6 @@ export function buildPlayerSave(args: {
   base: PlanBase;
   adopted: AppliedMorph[];
   past: HistoryStep[];
-}): { plan: any; checkpointed: boolean } {
+}): { ok: true; plan: any; checkpointed: boolean } | { ok: false; errors: string[] } {
   return buildAppSave(args);
 }

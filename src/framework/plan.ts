@@ -493,18 +493,26 @@ export function chainForSave(
   width: number,
   height: number,
   ctx: MorphContext = {}
-): { base: PlanBase; morphs: AppliedMorph[]; checkpointed: boolean } {
+): { ok: true; base: PlanBase; morphs: AppliedMorph[]; checkpointed: boolean } | { ok: false; errors: string[] } {
   // Save-publication rule shared with disjoint Tree chains (see
   // `publishesFullChain` on the scoped core): publish the full base + chain
   // only when the chain validates, the checked replay accepts it, and the
-  // replayed state matches the current board. Otherwise checkpoint honestly.
+  // replayed state matches the current board. Otherwise checkpoint honestly —
+  // but only a loadable checkpoint: an invalid current board is an error,
+  // never a file its own loader rejects.
   const chainValid = Array.isArray(chain) && validateChain(chain, ctx).length === 0;
   const replayed = chainValid ? replayMorphsChecked(base, chain, ctx) : replayMorphs(base, chain, ctx);
   const matches = replayed.ok && statesEqual(replayed.state, occupants, width, height) === null;
   if (gridRegistry.publishesFullChain(true, chainValid, replayed.ok, matches)) {
-    return { base, morphs: chain, checkpointed: false };
+    return { ok: true, base, morphs: chain, checkpointed: false };
   }
-  return { base: { occupants, width, height }, morphs: [], checkpointed: true };
+  const boardErrors = Array.isArray(occupants)
+    ? checkBoard(occupants, width, height)
+    : ["current occupants must be an array"];
+  if (boardErrors.length > 0) {
+    return { ok: false, errors: boardErrors.map(e => `current state: ${e}`) };
+  }
+  return { ok: true, base: { occupants, width, height }, morphs: [], checkpointed: true };
 }
 
 export type PlanApplyTarget = {

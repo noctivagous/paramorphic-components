@@ -138,7 +138,13 @@ export default function App() {
   const save = () => {
     // Settings come from the opened file; the chain is verified before
     // publishing, collapsing to an honest checkpoint when truncated.
-    const { plan, checkpointed } = buildKeyboardSave({ settings, size, occupants, base, adopted, past });
+    // An invalid current board is an error, never a file.
+    const res = buildKeyboardSave({ settings, size, occupants, base, adopted, past });
+    if (!res.ok) {
+      setErrors(res.errors);
+      return;
+    }
+    const { plan, checkpointed } = res;
     if (checkpointed) {
       setBase(plan.base);
       setAdopted([]);
@@ -245,7 +251,7 @@ export default function App() {
         </div>
       )}
       <div className="mt-3">
-        <KeyboardView occupants={occupants} setOccupants={push} width={size.w} height={size.h} />
+        <KeyboardView occupants={occupants} setOccupants={push} width={size.w} height={size.h} stagger={settings.interpretation?.keyboard?.stagger} />
       </div>
     </div>
   );

@@ -52,6 +52,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-04 — Three reported bugs fixed (slots, tree-save throw, grid checkpoint)
+
+Play mode dropped empty slots: it mapped anchors only, so Space (q=3) rendered against Alt (q=2). `KeyboardView` now renders `slotsForRow` (every column 0..width-1; empties hold position, covered span cells collapse into the anchor button) in both modes, and row offsets come from the plan (`interpretation.keyboard.stagger` via `staggerForRow`, `DEFAULT_STAGGER` fallback) instead of hardcoded constants. `chainForTreeSave` guarded its replay on a valid base: an invalid base with a valid chain threw in `cloneTreeState` instead of checkpointing a valid current state. `chainForSave`/`buildAppSave` are now fallible: a current board that fails `checkBoard` returns errors (surfaced in all three shells) instead of publishing a checkpoint its own loader rejects. `verify:replay` §30 pins all three (175 total, was 169) with `typecheck` and all four builds green. Open: the shared `GridViewport` still has no span/stagger geometry — the keyboard proves the state and morph machinery, not the shared renderer.
+
 ### 2026-11-04 — Unified morph machinery and keyboard proof
 
 `src/framework/morphs/scoped.ts` is now the single implementation: per-scope registries with validate/check/replay/invert/chain-surgery (`removeAt`/`replaceAt`) and the shared save-publication predicate (`publishesFullChain`). The Grid registry (`src/framework/morphs/registry.ts`) is the `PlanState` instance of that factory; `src/framework/history.ts` adds the generic `createHistory<S>` factory with the `PlanState` undo/redo as its instance; `src/framework/save.ts` (`buildAppSave`) is the one save path all three Grid shells use; `plan.ts chainForSave` and `tree2.ts chainForTreeSave` publish through the same predicate, and disjoint Tree chains run surgery through the same core (`removeTreeMorphAt`/`replaceTreeMorphAt`). Spreadsheet and player shells are behavior-identical on the shared path (same plan files, same checkpoint semantics).

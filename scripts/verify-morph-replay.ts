@@ -31,6 +31,7 @@ import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, 
 import { gridRegistry } from "../src/framework/morphs/registry";
 import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
+import { slotsForRow, staggerForRow } from "../src/views/KeyboardView";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
 
 let pass = 0;
@@ -294,17 +295,21 @@ for (const f of files) {
   } else {
     const full = chainForSave(first.plan.base, first.plan.morphs, first.plan.occupants ?? [],
       first.plan.width, first.plan.height);
-    check("complete chain saves whole", !full.checkpointed && full.morphs.length === 11);
+    check("complete chain saves whole", full.ok && !full.checkpointed && full.morphs.length === 11);
     // Simulate a truncated history: drop the first step but keep the cache.
     const partial = chainForSave(first.plan.base, first.plan.morphs.slice(1), first.plan.occupants ?? [],
       first.plan.width, first.plan.height);
-    check("partial chain checkpoints", partial.checkpointed && partial.morphs.length === 0);
-    check("checkpoint base is current state", partial.base.occupants.length === 11);
-    const reload = loadPlan({
-      data: { ...data, base: partial.base, morphs: partial.morphs, occupants: partial.base.occupants },
-      errors: [],
-    }, null);
-    check("checkpoint file loads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
+    check("partial chain checkpoints", partial.ok && partial.checkpointed && partial.morphs.length === 0);
+    if (partial.ok) {
+      check("checkpoint base is current state", partial.base.occupants.length === 11);
+      const reload = loadPlan({
+        data: { ...data, base: partial.base, morphs: partial.morphs, occupants: partial.base.occupants },
+        errors: [],
+      }, null);
+      check("checkpoint file loads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
+    } else {
+      check("checkpoint file loads", false, partial.errors.join("; "));
+    }
   }
 }
 
@@ -902,7 +907,7 @@ for (const f of files) {
       adopted: sfirst.plan.morphs,
       past: [],
     });
-    check("shared save publishes whole chain", !saved.checkpointed && saved.plan.morphs.length === 11);
+    check("shared save publishes whole chain", saved.ok && !saved.checkpointed && saved.plan.morphs.length === 11);
   }
 }
 
@@ -941,13 +946,59 @@ for (const f of files) {
       adopted: kfirst.plan.morphs,
       past: [{ snapshot: { occupants: occs, width: 15, height: 5 }, morph: { name: "key.define", params: { occ: extra }, inverse: { prev: null } } }],
     });
-    check("keyboard edit saves whole", !saved.checkpointed, saved.checkpointed ? "checkpointed" : "");
-    const reload = loadPlan({ data: { ...kdata, base: saved.plan.base, morphs: saved.plan.morphs, occupants: saved.plan.occupants }, errors: [] }, null);
-    check("keyboard save reloads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
-    if (reload.ok) {
-      check("keyboard keeps edit", (reload.plan.occupants ?? []).some(o => o.id === "key-f13"));
+    check("keyboard edit saves whole", saved.ok && !saved.checkpointed, saved.ok ? "checkpointed" : saved.errors.join("; "));
+    if (!saved.ok) {
+      check("keyboard save reloads", false, saved.errors.join("; "));
+    } else {
+      const reload = loadPlan({ data: { ...kdata, base: saved.plan.base, morphs: saved.plan.morphs, occupants: saved.plan.occupants }, errors: [] }, null);
+      check("keyboard save reloads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
+      if (reload.ok) {
+        check("keyboard keeps edit", (reload.plan.occupants ?? []).some(o => o.id === "key-f13"));
+      }
     }
   }
+}
+
+// 30. Reported regressions (failing until fixed).
+{
+  // (a) Keyboard play-mode layout keeps empty slots: Space anchors at q=3,
+  // so slot q=2 on row 4 is empty and Space covers 3..11.
+  const kdata = JSON.parse(readFileSync("apps/keyboard/morph-plans/keyboard.json", "utf8"));
+  const koccs = kdata.occupants as any[];
+  const row4 = slotsForRow(koccs, 15, 4);
+  check("slot q=2 stays empty before Space",
+    row4[2]?.key === null && !row4[2]?.covered, JSON.stringify(row4[2]));
+  check("Space covers slots 3..11",
+    row4[3]?.key?.id === "key-space" && row4[4]?.covered && row4[11]?.covered && !row4[12]?.covered);
+  check("stagger reads plan offsets with fallback",
+    staggerForRow(3, [0, 10, 20, 30, 48]) === 30 && staggerForRow(9, [0, 10]) === 10 && staggerForRow(0, []) === 0);
+  // (b) Tree save with an invalid base checkpoints a valid current state.
+  const troot = { id: "troot", kind: "folder", parent: null, label: "troot" };
+  let treeThrew = false;
+  let treeRes: any = null;
+  try {
+    treeRes = chainForTreeSave({ nodes: "nope" } as any,
+      [{ name: "tree.addNode", params: { node: troot }, inverse: { prev: null } }] as any,
+      { nodes: [troot] } as any);
+  } catch {
+    treeThrew = true;
+  }
+  check("invalid tree base checkpoints valid current",
+    !treeThrew && treeRes?.ok === true && treeRes?.checkpointed === true,
+    treeThrew ? "threw" : JSON.stringify(treeRes));
+  // (c) Grid save refuses to publish an invalid checkpoint.
+  const badOcc = { id: "bad", anchor: { q: 99, r: 0 }, span: [], type: "cell", data: {}, tags: [] };
+  const gridRes = (chainForSave as any)({ occupants: [], width: 5, height: 4 }, [], [badOcc], 5, 4);
+  check("invalid grid checkpoint rejected",
+    gridRes?.ok === false && (gridRes?.errors?.length ?? 0) > 0, JSON.stringify(gridRes));
+  const badLoad = loadPlan({
+    data: { component: "Grid", tilingId: "square8", presetId: "x", width: 5, height: 4,
+      ruleSet: JSON.parse(readFileSync(files[0].path, "utf8")).ruleSet,
+      base: gridRes?.base ?? { occupants: [badOcc], width: 5, height: 4 },
+      morphs: gridRes?.morphs ?? [], occupants: [badOcc] },
+    errors: [],
+  }, null);
+  check("that checkpoint would load-reject", !badLoad.ok);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
