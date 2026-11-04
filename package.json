@@ -17,7 +17,10 @@
     "preview:player": "vite preview --config apps/player/vite.config.ts",
     "dev:keyboard": "vite --config apps/keyboard/vite.config.ts",
     "build:keyboard": "vite build --config apps/keyboard/vite.config.ts",
-    "preview:keyboard": "vite preview --config apps/keyboard/vite.config.ts"
+    "preview:keyboard": "vite preview --config apps/keyboard/vite.config.ts",
+    "dev:browser": "vite --config apps/browser/vite.config.ts",
+    "build:browser": "vite build --config apps/browser/vite.config.ts",
+    "verify:browser": "esbuild scripts/verify-browser.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-browser.cjs --log-level=error && node /tmp/verify-browser.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",
