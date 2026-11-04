@@ -3,7 +3,10 @@ import {
   DirectionCompass,
   GridViewport,
   TILINGS_LIST,
+  applyFormulas,
   applyPlan,
+  commitCellText,
+  errorIdsFor,
   getTiling,
   loadPlan,
   makeId,
@@ -13,7 +16,6 @@ import {
   validatePlan,
 } from "./src/framework";
 import { STORED_PLANS, getStoredPlan } from "./morph-plans";
-import { SpreadsheetView } from "./src/views/SpreadsheetView";
 import { PlayerView } from "./src/views/PlayerView";
 import { ChatView } from "./src/views/ChatView";
 import type {
@@ -302,6 +304,8 @@ export default function App() {
   const [presetId, setPresetId] = useState("chess6");
   const [ruleSet, setRuleSet] = useState<RuleSet>(() => presetData("chess6").ruleSet);
   const [occupants, setOccupants] = useState<Occupant[]>(() => presetData("chess6").occupants);
+  const sheetDerived = useMemo(() => applyFormulas(occupants), [occupants]);
+  const sheetErrorIds = useMemo(() => errorIdsFor(sheetDerived.errors), [sheetDerived]);
   const [width, setWidth] = useState(6);
   const [height, setHeight] = useState(6);
   const [regions, setRegions] = useState<Region[]>(() => presetData("chess6").regions);
@@ -587,11 +591,71 @@ export default function App() {
 
           <div className="flex-1">
             {component === "Grid" && (interpretation as any)?.view === "spreadsheet" ? (
-              <SpreadsheetView
+              <GridViewport
                 occupants={occupants}
                 setOccupants={setOccupants}
+                tiling={tiling}
+                ruleSet={ruleSet}
                 width={width}
                 height={height}
+                toggles={toggles}
+                selectedId={selectedId}
+                setSelectedId={setSelectedId}
+                validMoves={validMoves}
+                setValidMoves={setValidMoves}
+                currentTurn={currentTurn}
+                setCurrentTurn={setCurrentTurn}
+                outcome={outcome}
+                setOutcome={setOutcome}
+                chainCaptureActive={chainCaptureActive}
+                setChainCaptureActive={setChainCaptureActive}
+                logicTriples={logicTriples}
+                showRegions={showRegions}
+                setShowRegions={setShowRegions}
+                showSpan={false}
+                knightDemo={knightDemo}
+                setKnightDemo={setKnightDemo}
+                chrome={false}
+                presentation={(interpretation as any)?.grid?.cell}
+                headers={(interpretation as any)?.grid?.headers}
+                derivedOccupants={sheetDerived.occupants}
+                derivedErrorIds={sheetErrorIds}
+                derivedErrors={sheetDerived.errors}
+                onCellCommit={(q, r, text) => {
+                  const next = commitCellText(occupants, q, r, text);
+                  if (next) setOccupants(next);
+                }}
+                presentationHint="Type a number, text, or =formula. Formulas recompute through the derivation DAG on every edit."
+              />
+            ) : component === "Grid" && (interpretation as any)?.view === "calendar" ? (
+              <GridViewport
+                occupants={occupants}
+                setOccupants={setOccupants}
+                tiling={tiling}
+                ruleSet={ruleSet}
+                width={width}
+                height={height}
+                toggles={toggles}
+                selectedId={selectedId}
+                setSelectedId={setSelectedId}
+                validMoves={validMoves}
+                setValidMoves={setValidMoves}
+                currentTurn={currentTurn}
+                setCurrentTurn={setCurrentTurn}
+                outcome={outcome}
+                setOutcome={setOutcome}
+                chainCaptureActive={chainCaptureActive}
+                setChainCaptureActive={setChainCaptureActive}
+                logicTriples={logicTriples}
+                showRegions={showRegions}
+                setShowRegions={setShowRegions}
+                showSpan={false}
+                knightDemo={knightDemo}
+                setKnightDemo={setKnightDemo}
+                chrome={false}
+                presentation={(interpretation as any)?.grid?.cell}
+                headers={(interpretation as any)?.grid?.headers}
+                presentationHint="Month grid rendered by the same cell presentations as the spreadsheet."
               />
             ) : component === "Grid" && (interpretation as any)?.view === "chat" ? (
               <ChatView occupants={occupants} setOccupants={setOccupants} />

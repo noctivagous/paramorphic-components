@@ -1,0 +1,204 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "calendar",
+  "width": 7,
+  "height": 5,
+  "ruleSet": {
+    "id": "calendar",
+    "setup": {
+      "width": 7,
+      "height": 5,
+      "description": "Month grid: events as occupants, same editableText/eventCard presentations as the sheet"
+    },
+    "moves": [
+      {
+        "pieceType": "*",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "planner"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "none",
+      "action": "none"
+    },
+    "regions": []
+  },
+  "occupants": [
+    {
+      "id": "ev-dentist",
+      "anchor": {
+        "q": 1,
+        "r": 1
+      },
+      "span": [],
+      "type": "event",
+      "data": {
+        "label": "Dentist 9:00"
+      },
+      "tags": []
+    },
+    {
+      "id": "ev-lunch",
+      "anchor": {
+        "q": 3,
+        "r": 1
+      },
+      "span": [],
+      "type": "event",
+      "data": {
+        "label": "Lunch Maya"
+      },
+      "tags": []
+    },
+    {
+      "id": "ev-demo",
+      "anchor": {
+        "q": 5,
+        "r": 2
+      },
+      "span": [],
+      "type": "event",
+      "data": {
+        "label": "Demo day"
+      },
+      "tags": []
+    },
+    {
+      "id": "ev-gym",
+      "anchor": {
+        "q": 0,
+        "r": 3
+      },
+      "span": [],
+      "type": "event",
+      "data": {
+        "label": "Gym"
+      },
+      "tags": []
+    }
+  ],
+  "regions": [],
+  "turns": {
+    "type": "free",
+    "order": [],
+    "first": "planner"
+  },
+  "outcomes": [],
+  "interpretation": {
+    "view": "calendar",
+    "grid": {
+      "cell": {
+        "kind": "eventCard",
+        "value": "data.label"
+      },
+      "headers": {
+        "columns": "letters",
+        "rows": "numbers"
+      }
+    }
+  },
+  "base": {
+    "occupants": [],
+    "width": 7,
+    "height": 5
+  },
+  "morphs": [
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "ev-dentist",
+          "anchor": {
+            "q": 1,
+            "r": 1
+          },
+          "span": [],
+          "type": "event",
+          "data": {
+            "label": "Dentist 9:00"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "ev-lunch",
+          "anchor": {
+            "q": 3,
+            "r": 1
+          },
+          "span": [],
+          "type": "event",
+          "data": {
+            "label": "Lunch Maya"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "ev-demo",
+          "anchor": {
+            "q": 5,
+            "r": 2
+          },
+          "span": [],
+          "type": "event",
+          "data": {
+            "label": "Demo day"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "ev-gym",
+          "anchor": {
+            "q": 0,
+            "r": 3
+          },
+          "span": [],
+          "type": "event",
+          "data": {
+            "label": "Gym"
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ]
+}

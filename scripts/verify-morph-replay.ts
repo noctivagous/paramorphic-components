@@ -33,6 +33,7 @@ import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, 
 import { gridRegistry } from "../src/framework/morphs/registry";
 import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
+import { colName, commitCellText, errorIdsFor, resolveBinding } from "../src/framework/presentations";
 import { GridViewport, mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
 import { getTiling } from "../src/framework/tilings";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
@@ -1037,12 +1038,59 @@ for (const f of files) {
     viewSrc.includes("onOccupantTap") && viewSrc.includes("onEmptyTap"));
   check("no custom keyboard view remains",
     !(() => { try { readFileSync("src/views/KeyboardView.tsx", "utf8"); return true; } catch { return false; } })());
+  check("no custom spreadsheet view remains",
+    !(() => { try { readFileSync("src/views/SpreadsheetView.tsx", "utf8"); return true; } catch { return false; } })());
   const spaceBox = mergedBox(kb.occupants.find((o: any) => o.id === "key-space"), 44);
   check("space merges to a 9-cell box at q=3",
     !!spaceBox && spaceBox.w === 9 * 44 - 2 && spaceBox.minQ === 3 && spaceBox.minR === 4,
     JSON.stringify(spaceBox));
   check("single-cell keys need no box",
     mergedBox(kb.occupants.find((o: any) => o.id === "key-Q"), 44) === null);
+}
+
+// 32. Cell presentations: config validation, bindings, commits, calendar proof.
+{
+  const sdata = JSON.parse(readFileSync("apps/spreadsheet/morph-plans/spreadsheet.json", "utf8"));
+  const sfirst = loadPlan({ data: sdata, errors: [] }, null);
+  check("spreadsheet presentation plan loads", sfirst.ok, sfirst.ok ? "" : sfirst.errors.join("; "));
+  if (sfirst.ok) {
+    check("spreadsheet configures editableText",
+      (sdata.interpretation as any)?.grid?.cell?.kind === "editableText");
+  }
+  const cdata = JSON.parse(readFileSync("morph-plans/calendar.json", "utf8"));
+  const cfirst = loadPlan({ data: cdata, errors: [] }, null);
+  check("calendar proof plan loads", cfirst.ok, cfirst.ok ? "" : cfirst.errors.join("; "));
+  if (cfirst.ok) {
+    check("calendar yields 4 events", (cfirst.plan.occupants ?? []).length === 4);
+    check("calendar reuses the presentation channel",
+      (cdata.interpretation as any)?.grid?.cell?.kind === "eventCard" &&
+      (cdata.interpretation as any)?.grid?.headers?.columns === "letters" &&
+      (cdata.interpretation as any)?.grid?.headers?.rows === "numbers");
+  }
+  // Unknown kinds and non-data bindings are actionable errors, not silent.
+  const badKind = loadPlan({ data: { ...sdata, interpretation: { view: "x", grid: { cell: { kind: "fancy", value: "data.value" }, headers: { columns: "letters", rows: "numbers" } } } }, errors: [] }, null);
+  check("unknown presentation kind rejected",
+    !badKind.ok && badKind.errors.some(e => e.includes("editableText")),
+    badKind.ok ? "loaded" : badKind.errors.join("; "));
+  const badPath = loadPlan({ data: { ...sdata, interpretation: { view: "x", grid: { cell: { kind: "readOnly", value: "label" }, headers: { columns: "letters", rows: "numbers" } } } }, errors: [] }, null);
+  check("non-data binding rejected", !badPath.ok, badPath.ok ? "loaded" : "");
+  // Bindings resolve present fields, miss absent ones, refuse bad paths.
+  const occ = { id: "c", anchor: { q: 0, r: 0 }, span: [], type: "cell", data: { value: 7 }, tags: [] };
+  check("binding reads present field", resolveBinding(occ, "data.value").value === 7);
+  check("binding misses absent field", !resolveBinding(occ, "data.formula").found);
+  check("binding refuses bad path", !resolveBinding(occ, "label").found && !resolveBinding(undefined, "data.value").found);
+  // Commits: value, formula, clear, and no-op.
+  const put = commitCellText([], 1, 1, "hello");
+  check("commit writes text", !!put && put[0]?.data?.value === "hello");
+  const putNum = commitCellText([], 0, 0, "42");
+  check("commit writes numbers as numbers", !!putNum && putNum[0]?.data?.value === 42);
+  const putFx = commitCellText([], 0, 0, "=A1+1");
+  check("commit writes formulas", !!putFx && (putFx[0]?.data as any)?.formula === "=A1+1");
+  const cleared = commitCellText(put ?? [], 1, 1, "  ");
+  check("commit clears on empty text", !!cleared && cleared.length === 0);
+  check("commit no-ops on identical text", commitCellText(put ?? [], 1, 1, "hello") === null);
+  check("headers letter correctly", colName(0) === "A" && colName(25) === "Z" && colName(26) === "AA");
+  check("error ids parse", errorIdsFor(["c-0-0: boom", "other"]).join(",") === "c-0-0,other");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

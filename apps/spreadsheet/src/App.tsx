@@ -1,8 +1,10 @@
 // Spreadsheet app shell: menubar, undo history, save/open as morph-plan
-// files. The sheet itself is SpreadsheetView; plans enter and leave through
-// loadPlan, so a corrupt file can never become a broken board.
-import React, { useRef, useState } from "react";
-import { SpreadsheetView } from "../../../src/views/SpreadsheetView";
+// files. The sheet renders through the shared GridViewport, driven by the
+// plan's cell presentation; plans enter and leave through loadPlan, so a
+// corrupt file can never become a broken board.
+import React, { useMemo, useRef, useState } from "react";
+import { GridViewport } from "../../../src/framework/components/GridViewport";
+import { applyFormulas, commitCellText, errorIdsFor, getTiling } from "../../../src/framework";
 import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
 import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
 import { PLANS } from "./plans";
@@ -97,6 +99,21 @@ export default function App() {
     setFuture([]);
     setOccupantsState(next);
   };
+
+  const commit = (q: number, r: number, text: string) => {
+    const next = commitCellText(occupants, q, r, text);
+    if (next) push(next);
+  };
+
+  const { occupants: shown, errors: formulaErrors } = useMemo(() => applyFormulas(occupants), [occupants]);
+  const formulaErrorIds = useMemo(() => errorIdsFor(formulaErrors), [formulaErrors]);
+  const presentation = settings.interpretation?.grid?.cell;
+  const headers = settings.interpretation?.grid?.headers;
+  const tiling = useMemo(() => getTiling((settings.tilingId as any) ?? "square8"), [settings.tilingId]);
+  const offToggles = useMemo(
+    () => ({ gravity: false, diagonal: false, sliding: false, wrapping: false, chainCapture: false }),
+    []
+  );
 
   const reset = (
     next: Occupant[],
@@ -248,7 +265,45 @@ export default function App() {
         </div>
       )}
       <div className="mt-3">
-        <SpreadsheetView occupants={occupants} setOccupants={push} width={size.w} height={size.h} />
+        {presentation ? (
+          <GridViewport
+            occupants={occupants}
+            setOccupants={setOccupantsState}
+            tiling={tiling}
+            ruleSet={settings.ruleSet}
+            width={size.w}
+            height={size.h}
+            toggles={offToggles}
+            selectedId={null}
+            setSelectedId={() => {}}
+            validMoves={[]}
+            setValidMoves={() => {}}
+            currentTurn=""
+            setCurrentTurn={() => {}}
+            outcome={null}
+            setOutcome={() => {}}
+            chainCaptureActive={false}
+            setChainCaptureActive={() => {}}
+            logicTriples={[]}
+            showRegions={false}
+            setShowRegions={() => {}}
+            showSpan={false}
+            knightDemo={false}
+            setKnightDemo={() => {}}
+            chrome={false}
+            presentation={presentation}
+            headers={headers}
+            derivedOccupants={shown}
+            derivedErrorIds={formulaErrorIds}
+            derivedErrors={formulaErrors}
+            onCellCommit={commit}
+            presentationHint="Type a number, text, or =formula. Formulas recompute through the derivation DAG on every edit."
+          />
+        ) : (
+          <div className="text-[11px] text-[#ff8a6b]">
+            This plan carries no cell presentation (interpretation.grid). Open a plan that configures one.
+          </div>
+        )}
       </div>
     </div>
   );

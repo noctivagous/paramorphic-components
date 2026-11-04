@@ -18,6 +18,7 @@ export * from "./morphs/registry";
 export * from "./morphs/scoped";
 export * from "./history";
 export * from "./save";
+export * from "./presentations";
 import "./morphs/sheet";
 import "./morphs/grid";
 import "./morphs/player";

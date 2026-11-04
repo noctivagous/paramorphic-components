@@ -1,6 +1,6 @@
 // ---------- Sheet morph vocabulary: the spreadsheet's actual edits ----------
 // First vocabulary over the morph registry. Covers the cell writes the undo
-// stack records (see SpreadsheetView commit + App push). Resize, file open
+// stack records (see commitCellText in presentations.ts + App push). Resize, file open
 // and reload clear the chain instead: they replace the base, so there is no
 // morph to pop and the snapshot path owns them.
 import type { Occupant } from "../types";

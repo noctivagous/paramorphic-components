@@ -1,6 +1,7 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
 import { gridRegistry, recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
+import { validatePresentationConfig } from "./presentations";
 import { cellsOf } from "./editing";
 
 // ---------- Plan parsing & validation ----------
@@ -411,6 +412,9 @@ export function loadPlan(
   if (data?.morphs !== undefined) {
     if (!Array.isArray(data.morphs)) errors.push("plan.morphs must be an array");
     else for (const e of validateChain(data.morphs, { tilingId: data.tilingId })) errors.push(e);
+  }
+  if (data?.interpretation?.grid !== undefined) {
+    for (const e of validatePresentationConfig(data.interpretation.grid)) errors.push(e);
   }
   if (errors.length > 0) return { ok: false, errors };
   const setup = data.ruleSet?.setup || {};

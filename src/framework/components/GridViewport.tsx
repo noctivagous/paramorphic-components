@@ -4,6 +4,7 @@ import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
 import { buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occupantAtCell, pieceMatchesRule } from "../occupancy";
 import { makeId } from "../tilings";
 import { applySurroundCapture, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, ruleHasSurroundCapture } from "../engine";
+import { colName, resolveBinding, type CellPresentation, type GridHeaders } from "../presentations";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
 
@@ -58,6 +59,17 @@ export type GridViewportProps = {
   /** Tap overrides: when set, bypass game logic for that cell. */
   onOccupantTap?: (occ: Occupant) => void;
   onEmptyTap?: (pos: Pos) => void;
+  /** Plan-configured cell presentation (editable sheet, event cards, ...). */
+  presentation?: CellPresentation;
+  headers?: GridHeaders;
+  /** Derived display state (e.g. recomputed formulas); falls back to occupants. */
+  derivedOccupants?: Occupant[];
+  derivedErrorIds?: string[];
+  derivedErrors?: string[];
+  /** Text commit from a presentation cell; shell maps it to occupant edits. */
+  onCellCommit?: (q: number, r: number, text: string) => void;
+  /** Help line under a presentation table. */
+  presentationHint?: string;
   tiling: TilingDef;
   ruleSet: RuleSet;
   width: number;
@@ -102,7 +114,8 @@ export function DirectionCompass({ tiling }: { tiling: TilingDef }) {
 export function GridViewport({
   occupants, setOccupants, tiling, ruleSet, width, height, toggles, selectedId, setSelectedId, validMoves, setValidMoves,
   currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo,
-  mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap
+  mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap,
+  presentation, headers, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint
 }: GridViewportProps) {
   const cellSize = tiling.shape === "square" ? 44 : 40;
 
@@ -367,6 +380,113 @@ export function GridViewport({
   const containerHeight = tiling.shape === "square" ? height * cellSize : height * cellSize * 0.78 + 30;
 
   const selectedOcc = occupants.find((o: Occupant) => o.id === selectedId);
+
+  // Plan-configured presentation table (editable sheet, event cards): headers
+  // plus bound cells instead of the game board. Game rendering below is
+  // untouched when no presentation is configured.
+  if (presentation) {
+    const shown = derivedOccupants ?? occupants;
+    const byKey = new Map<string, Occupant>();
+    for (const o of shown) byKey.set(`${o.anchor.q},${o.anchor.r}`, o);
+    const errIds = new Set(derivedErrorIds ?? []);
+    const showCols = (headers?.columns ?? "none") === "letters";
+    const showRows = (headers?.rows ?? "none") === "numbers";
+    const cellText = (o: Occupant | undefined): { display: string; formula?: string; err: boolean } => {
+      if (presentation.kind === "eventCard") {
+        return { display: String(resolveBinding(o, presentation.value).value ?? ""), err: !!o && errIds.has(o.id) };
+      }
+      const formula = presentation.formula
+        ? (resolveBinding(o, presentation.formula).value as string | undefined)
+        : undefined;
+      if (formula) {
+        const err = !!o && errIds.has(o.id);
+        if (err) return { display: formula, formula, err };
+        const computed = resolveBinding(o, presentation.computed).value;
+        return { display: String(computed ?? ""), formula, err };
+      }
+      return {
+        display: String(resolveBinding(o, presentation.value).value ?? ""),
+        err: !!o && errIds.has(o.id),
+      };
+    };
+    const cols = Array.from({ length: width }, (_, q) => q);
+    const rows = Array.from({ length: height }, (_, r) => r);
+    return (
+      <div>
+        <table className="border-collapse">
+          {showCols && (
+            <thead>
+              <tr>
+                {showRows && <th className="w-8 px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal" />}
+                {cols.map(q => (
+                  <th key={q} className="px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal text-center min-w-[72px]">
+                    {colName(q)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {rows.map(r => (
+              <tr key={r}>
+                {showRows && <td className="px-1 py-1 text-[9px] text-[var(--text-faint)] text-right">{r + 1}</td>}
+                {cols.map(q => {
+                  const o = byKey.get(`${q},${r}`);
+                  const { display, formula, err } = cellText(o);
+                  if (presentation.kind !== "editableText" || !onCellCommit) {
+                    return (
+                      <td key={q} className="p-0 border border-[var(--border)]">
+                        <div
+                          title={formula ? `${colName(q)}${r + 1}: ${formula}` : `${colName(q)}${r + 1}`}
+                          className={`px-1 py-1 text-[11px] ${presentation.kind === "eventCard" ? "rounded-[6px] bg-[var(--bg-3)]" : ""} ${
+                            formula ? "text-[var(--accent)]" : "text-[var(--text)]"
+                          } ${err ? "text-[#ff8a6b]" : ""}`}
+                        >
+                          {display === "" ? <span className="text-[var(--text-faint)]">·</span> : err && formula ? "#ERR" : display}
+                        </div>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={q} className="p-0 border border-[var(--border)]">
+                      <input
+                        key={`${o?.id ?? `empty-${q}-${r}`}:${String(display)}`}
+                        defaultValue={formula ?? String(display)}
+                        spellCheck={false}
+                        onBlur={e => {
+                          if (e.target.value !== (formula ?? String(display))) onCellCommit(q, r, e.target.value);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        }}
+                        title={formula ? `${colName(q)}${r + 1}: ${formula}` : `${colName(q)}${r + 1}`}
+                        className={`w-full px-1 py-1 bg-[var(--bg-3)] text-[11px] outline-none focus:bg-[var(--bg-4)] ${
+                          formula ? "text-[var(--accent)]" : "text-[var(--text)]"
+                        } ${err ? "text-[#ff8a6b]" : ""}`}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {(derivedErrors ?? []).length > 0 && (
+          <div className="mt-2 p-2 rounded-[8px] bg-[rgba(90,255,140,0.06)] border border-[var(--border)] text-[9px] text-[var(--text-dim)]">
+            <div className="font-bold text-[#ff8a6b]">SHEET ERRORS</div>
+            {(derivedErrors ?? []).map((e, i) => (
+              <div key={i} className="mt-1">
+                • {e}
+              </div>
+            ))}
+          </div>
+        )}
+        {presentationHint && (
+          <div className="mt-1 text-[9px] text-[var(--text-faint)]">{presentationHint}</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full flex flex-col">

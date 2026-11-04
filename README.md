@@ -57,30 +57,40 @@ The key distinction is: a component provides the structure; a vocabulary describ
 
 > And then if you set up an app with our system, what does the directory filetree look like?
 
-Today, the spreadsheet app is organized like this:
+Today, the spreadsheet app has its own directory and plan:
 
+```text
 apps/spreadsheet/
 ├── index.html
 ├── vite.config.ts
 ├── morph-plans/
-│   └── spreadsheet.json     # App configuration, base, and morph chain
+│   └── spreadsheet.json     # Configuration, base, and morph chain
 └── src/
     ├── main.tsx             # Starts the app
     ├── App.tsx              # App shell: menus, history, save/open
-    └── plans.ts             # Makes the app's plans available
+    ├── plans.ts             # Makes the app's plans available
+    └── save.ts              # App settings for the shared save helper
+```
 
-It imports shared pieces from elsewhere in the project:
+It uses shared pieces from elsewhere in the project:
 
+```text
 src/
 ├── framework/
-│   ├── morphs/              # Registry and morph vocabularies
-│   ├── plan.ts              # Plan loading and validation
-│   ├── history.ts           # Undo and redo
+│   ├── components/
+│   │   └── GridViewport.tsx # Shared Grid renderer (boards, keyboards, sheets)
+│   ├── morphs/              # Registry, shared machinery, and vocabularies
+│   ├── plan.ts              # Plan loading, validation, and replay
+│   ├── history.ts           # Undo and redo machinery
+│   ├── save.ts              # Shared Grid app save helper
+│   ├── presentations.ts     # Plan-configured cell presentations and headers
 │   └── ...                  # Grid and other shared mechanisms
 └── views/
-    └── SpreadsheetView.tsx  # Spreadsheet presentation and interaction
+    ├── PlayerView.tsx       # Sequencer transport (timed, not plan-rendered)
+    └── ChatView.tsx         # Thread/message rendering
+```
 
-The intended direction is for each app to have its own plan and a thin shell, while sharing components and stock morphs. Today the shell and view still contain application-specific code, so the plan does not yet describe the entire app.
+The player and keyboard also have their own directories and plans. The keyboard and spreadsheet use the shared `GridViewport` (geometry plus plan-configured cell presentations); the player keeps its own transport view. Each app's shell still supplies application-specific behavior, so its plan does not yet describe the entire app. The intended direction is to move recurring capabilities into shared components and stock morphs, leaving each app with a plan and a thin shell.
 
 
 > Where are we on this project?
@@ -505,7 +515,7 @@ AI assembles apps under four rules:
 - **Introspection guides the work.** The AI asks what has been morphed so far and which morphs apply next, so it starts from the current state instead of guessing.
 - **Custom code is the exception.** It lives in a named morph that can be reviewed alone.
 
-Runtime status: the morph machinery is one generic core (`src/framework/morphs/scoped.ts`: per-scope validate/check/apply/invert/replay, chain surgery, and the shared save-publication predicate). The Grid registry (`src/framework/morphs/registry.ts`) is the `PlanState` instance of that core — replay via `replayMorphs`, introspection via `listMorphs`/`describeChain`; the disjoint Tree scope (`tree2.ts`) runs the same contract on `TreeState`, and all Grid shells save through the shared `buildAppSave`. Stored plans carry a `base` plus a `morphs[]` chain and are constructed by replay on load: `loadPlan` (`src/framework/plan.ts`) replays base + morphs and rejects the file when the result differs from the cached snapshot, so a plan is never partially applied. The generic occupant/dimension vocabulary lives in `src/framework/morphs/grid.ts` (`grid.upsertOccupant`, `grid.removeOccupant`, `grid.resize`); the spreadsheet, sequencer/player and chat files all boot from replayed chains (11, 3 and 5 morphs over an empty base), the spreadsheet shell boots and saves through the same path, and the demo shell reports the replayed provenance. Check with `npm run verify:replay` (183 checks: §2 paths plus player record/undo/redo/save/load, cursor history contract including cursor-preserving replay, tree registration/validation/replay/undo/redo/serialization, unified-core scope/history/save checks, the keyboard plan load/collision/save round trip, save/checkpoint regression fixes, and shared-renderer geometry). The keyboard app (`apps/keyboard/`, `key.define`/`key.remove` in `src/framework/morphs/keys.ts`) boots from a 47-morph plan and renders through the shared `GridViewport`: wide keys merge via occupant span, rows stagger from a plan offset, presses arrive as tap overrides and stay unrecorded. Earlier-morph removal and replacement replay dependents with step-indexed conflict reports (`removeMorphAt`, `replaceMorphAt`); candidate morphs are tested against the exact state (`checkMorphState`: bounds, presence, collisions) and chains read in human terms (`describeChain`); a save publishes the full chain only when it still replays, otherwise an honest snapshot checkpoint (`chainForSave`); absent or content-free inverse data throws so undo falls back to the snapshot instead of guessing; inverse frames are re-derived from the replay on load and after chain surgery (`recaptureFrames`); unknown `$schema` versions are rejected and malformed bases report errors without throwing. Spreadsheet undo pops applied morphs via their inverses (`sheet.setCell`, `sheet.clearCell` in `src/framework/morphs/sheet.ts`); the snapshot history stack remains as the fallback for steps no morph covers. Morphs that cannot invert declare `invertible: false` and use the snapshot path (the Q4 policy).
+Runtime status: the morph machinery is one generic core (`src/framework/morphs/scoped.ts`: per-scope validate/check/apply/invert/replay, chain surgery, and the shared save-publication predicate). The Grid registry (`src/framework/morphs/registry.ts`) is the `PlanState` instance of that core — replay via `replayMorphs`, introspection via `listMorphs`/`describeChain`; the disjoint Tree scope (`tree2.ts`) runs the same contract on `TreeState`, and all Grid shells save through the shared `buildAppSave`. Stored plans carry a `base` plus a `morphs[]` chain and are constructed by replay on load: `loadPlan` (`src/framework/plan.ts`) replays base + morphs and rejects the file when the result differs from the cached snapshot, so a plan is never partially applied. The generic occupant/dimension vocabulary lives in `src/framework/morphs/grid.ts` (`grid.upsertOccupant`, `grid.removeOccupant`, `grid.resize`); the spreadsheet, sequencer/player and chat files all boot from replayed chains (11, 3 and 5 morphs over an empty base), the spreadsheet shell boots and saves through the same path, and the demo shell reports the replayed provenance. Check with `npm run verify:replay` (204 checks: §2 paths plus player record/undo/redo/save/load, cursor history contract including cursor-preserving replay, tree registration/validation/replay/undo/redo/serialization, unified-core scope/history/save checks, the keyboard plan load/collision/save round trip, save/checkpoint regression fixes, shared-renderer geometry, and cell-presentation validation/bindings/commits). The keyboard app (`apps/keyboard/`, `key.define`/`key.remove` in `src/framework/morphs/keys.ts`) boots from a 47-morph plan and renders through the shared `GridViewport`: wide keys merge via occupant span, rows stagger from a plan offset, presses arrive as tap overrides and stay unrecorded. The spreadsheet configures its cells the same way (`interpretation.grid` in its plan: `editableText` bound to `data.value`/`data.formula`/`data.computed`, letter/number headers) and renders through the same viewport; a calendar proof plan reuses those presentations with `eventCard`. Earlier-morph removal and replacement replay dependents with step-indexed conflict reports (`removeMorphAt`, `replaceMorphAt`); candidate morphs are tested against the exact state (`checkMorphState`: bounds, presence, collisions) and chains read in human terms (`describeChain`); a save publishes the full chain only when it still replays, otherwise an honest snapshot checkpoint (`chainForSave`); absent or content-free inverse data throws so undo falls back to the snapshot instead of guessing; inverse frames are re-derived from the replay on load and after chain surgery (`recaptureFrames`); unknown `$schema` versions are rejected and malformed bases report errors without throwing. Spreadsheet undo pops applied morphs via their inverses (`sheet.setCell`, `sheet.clearCell` in `src/framework/morphs/sheet.ts`); the snapshot history stack remains as the fallback for steps no morph covers. Morphs that cannot invert declare `invertible: false` and use the snapshot path (the Q4 policy).
 
 ## 10. Reconciliation log
 
@@ -582,13 +592,14 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 | Stored plans as light modules | Convention (§9.0): one JSON file per app in `morph-plans/`, registry in `morph-plans/index.ts`, validated on load by `loadPlan`, applied by `applyPlan` | `morph-plans/`, `src/framework/plan.ts` |
 | Formula recalc with quarantine | Spreadsheet revealed the morph: `applyFormulas` recomputes `data.formula` cells in DAG order into `data.computed`; a cycle quarantines only its cells and dependents (Kahn's algorithm), never the sheet | `src/framework/morphs/formulas.ts` |
 | Framing without transport | Chat revealed the split: the length-prefix codec (`encodeFrame`/`decodeStream`, partial frames buffered) is framework vocabulary; delivery stays a platform adapter, still deferred | `src/framework/morphs/framing.ts` |
-| Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `morph-plans/*.json`, `src/views/` |
+| Renderer selection by interpretation | Three apps, one Grid: `interpretation.view` picks the renderer (sheet, player, chat), the concrete case of data-apart-from-interpretation; sustained notes fall out of span+triggers composing, no sustain code | `morph-plans/*.json`, `src/views/`, `GridViewport` presentation branch |
 | Player note vocabulary | Morph-library vocabulary over the editing mechanism: `player.placeNote`/`player.removeNote` validate note-shaped data (finite pitch, 0..1 velocity); the player app records, undoes and replays through it, never through grid/sheet morphs | `src/framework/morphs/player.ts`, `apps/player/` |
 | Cursor as carried field (not an independent state) | Carried `PlanState.cursor` on Grid state: rides along opaquely (grid morphs preserve it by spread), seeks undo when recorded via `cursor.seekTo`, files never persist it — the player shell leaves seeks unrecorded as transport position. `PlanState` stays `{ occupants, width, height, cursor? }` | `src/framework/morphs/cursor.ts`, `src/framework/history.ts` |
 | State-carrying history | Snapshots are whole plan states, not occupant lists, so later shapes undo through the same contract; placement checks shared by every occupant vocabulary (`checkPlacement`) | `src/framework/history.ts`, `src/framework/editing.ts` |
 | Tree vocabulary (vocabulary independence, Grid-hosted) | Hierarchy over the same occupants with invariants grids lack: unique ids, childless-only removal, cycle-rejecting reparent; replay, undo, redo and file load run unchanged. Not a disjoint-state proof: nodes are still `Occupant`s with `anchor {q,r}` in `width x height` bounds | `src/framework/morphs/tree.ts` |
 | Disjoint TreeState + scoped registries | `TreeState` is `{ nodes }` only — no width/height/occupants/anchor/span. `tree2.*` runs the same validate/check/replay/invert/file-load contract through an isolated `createMorphRegistry()` scope; same names can coexist in two scopes and unknown-morph errors stay in scope | `src/framework/tree-state.ts`, `src/framework/morphs/scoped.ts`, `src/framework/morphs/tree2.ts` |
 | Unified morph core + keyboard proof | `scoped.ts` is the single implementation (chain surgery and save-publication included); the Grid registry, the generic `createHistory<S>` factory, and `buildAppSave` are its instances. Keyboard: 15×5 grid, 47 keys from a 47-morph `key.define` chain, rendered by the shared `GridViewport` (`mergeSpans`, plan-driven `stagger`, tap overrides); 78 lines of vocabulary over the untouched core | `src/framework/save.ts`, `src/framework/morphs/keys.ts`, `src/framework/components/GridViewport.tsx`, `apps/keyboard/` |
+| Cell presentations + calendar proof | `interpretation.grid` selects a cell presentation (`editableText`, `readOnly`, `eventCard`) plus `data.<field>` bindings and letter/number headers; the spreadsheet and a 7×5 calendar plan (4 events) render through the same `GridViewport` branch, and both custom grid views are deleted | `src/framework/presentations.ts`, `morph-plans/calendar.json`, `apps/spreadsheet/` |
 
 Deliberately not in core: WebAudio specifics, the formula function library beyond arithmetic and aggregates, and any per-app mapping such as row-to-pitch. A sounding grid and a spreadsheet are now plans plus adapters, not components.
 

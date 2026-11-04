@@ -619,7 +619,19 @@
   },
   "outcomes": [],
   "interpretation": {
-    "view": "spreadsheet"
+    "view": "spreadsheet",
+    "grid": {
+      "cell": {
+        "kind": "editableText",
+        "value": "data.value",
+        "formula": "data.formula",
+        "computed": "data.computed"
+      },
+      "headers": {
+        "columns": "letters",
+        "rows": "numbers"
+      }
+    }
   },
   "base": {
     "occupants": [],
