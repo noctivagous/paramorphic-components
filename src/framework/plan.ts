@@ -3,7 +3,7 @@ import { TILINGS, getTiling } from "./tilings";
 import { gridRegistry, recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
 import { validatePresentationConfig } from "./presentations";
 import { ruleSetsEqual, validateMoveRule, validateOutcome, validateTurns } from "./rule-sets";
-import { loadRuleChain } from "./morphs/rules";
+import { loadRuleChain } from "./rule-chains";
 import { cellsOf } from "./editing";
 
 // ---------- Plan parsing & validation ----------

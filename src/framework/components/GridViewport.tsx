@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Axial, LogicTriple, MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, TilingDir, Toggles } from "../types";
 import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
-import { buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occupantAtCell, pieceMatchesRule } from "../occupancy";
+import { buildOccupancyMap, getOccupiedCells, isCellOccupied, occupantAtCell } from "../occupancy";
 import { makeId } from "../tilings";
-import { applySurroundCapture, canActOn, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, nextTurn, ruleHasSurroundCapture } from "../engine";
+import { applyPromotion, applySurroundCapture, canActOn, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, nextTurn, promotionOptions, promotionSymbol, ruleHasSurroundCapture } from "../engine";
 import { colName, editingPolicies, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
@@ -195,8 +195,48 @@ export function GridViewport({
     setOccupants(occupants.map((o: Occupant) => o.id === sel.id ? { ...o, span: rotated } : o));
   };
 
+  // Pending promotion choice: the move is committed, the turn waits for an
+  // explicit pick. Local state like the app-kit's other interaction state;
+  // a stale id (file opened mid-choice) simply clears on first use.
+  const [pendingPromotion, setPendingPromotion] = useState<{ id: string; options: string[]; captured: boolean } | null>(null);
+
+  // Shared post-move tail: chain capture, outcome, turn advance.
+  const finishMove = (newOccs: Occupant[], selId: string, captured: boolean) => {
+    const movedSel = newOccs.find((o: Occupant) => o.id === selId);
+    if (movedSel && captured && (toggles.chainCapture || ruleSet.moves.some((m: MoveRule) => m.onCapture?.chain))) {
+      const further = getValidMoves(movedSel, newOccs, tiling, ruleSet, width, height, toggles, logicTriples).filter((m: any) => m.capture);
+      if (further.length > 0) {
+        setOccupants(newOccs);
+        setSelectedId(selId);
+        setValidMoves(further);
+        setChainCaptureActive(true);
+        const out = checkOutcome(newOccs, currentTurn);
+        if (out) setOutcome(out);
+        return;
+      }
+    }
+    setOccupants(newOccs);
+    setChainCaptureActive(false);
+    const out = checkOutcome(newOccs, currentTurn);
+    if (out) setOutcome(out);
+    else {
+      setCurrentTurn(nextTurn(ruleSet.turns, currentTurn, captured));
+      setSelectedId(null);
+      setValidMoves([]);
+    }
+  };
+
+  const choosePromotion = (type: string) => {
+    if (!pendingPromotion) return;
+    const { id, captured } = pendingPromotion;
+    setPendingPromotion(null);
+    if (!occupants.some(o => o.id === id)) return;
+    finishMove(applyPromotion(occupants, id, type), id, captured);
+  };
+
   const handleCellClick = (q: number, r: number) => {
     if (outcome) return;
+    if (pendingPromotion) return;
     const clickedOcc = mapOccupant.get(`${q},${r}`) || null;
     // Explicit tap overrides bypass game logic (keyboard presses and layout
     // edits). Covered span cells map to their anchor occupant, so tapping
@@ -256,42 +296,21 @@ export function GridViewport({
 
       newOccs = newOccs.map(o => o.id === sel.id ? { ...o, anchor: { q, r }, data: { ...o.data, hasMoved: true } } : o);
 
-      // promotion via region
-      const matchingRule = ruleSet.moves.find((mr: MoveRule) => pieceMatchesRule(mr.pieceType, sel));
-      if (matchingRule?.onMove?.ifInRegion) {
-        const region = ruleSet.regions.find((rg: Region) => rg.id === matchingRule.onMove!.ifInRegion);
-        if (region && isPosInRegion({ q, r }, region)) {
-          const promoteTo = matchingRule.onMove!.promoteTo?.[0];
-          if (promoteTo) newOccs = newOccs.map(o => o.id === sel.id ? { ...o, type: promoteTo, data: { ...o.data, symbol: promoteTo === "queen" ? "♕" : promoteTo === "king_w" ? "♔" : "♚" } } : o);
-        }
+      // promotion via region: one option applies silently, several wait for
+      // an explicit choice instead of taking whatever is listed first.
+      const options = promotionOptions(sel, ruleSet, { q, r });
+      if (options.length === 1) {
+        newOccs = applyPromotion(newOccs, sel.id, options[0]);
+      } else if (options.length > 1) {
+        if (toggles.gravity || ruleSet.gravity) newOccs = applyGravity(newOccs);
+        setOccupants(newOccs);
+        setChainCaptureActive(false);
+        setPendingPromotion({ id: sel.id, options, captured: !!capMove?.capture });
+        return;
       }
 
       if (toggles.gravity || ruleSet.gravity) newOccs = applyGravity(newOccs);
-
-      // chain capture
-      const movedSel = newOccs.find((o: Occupant) => o.id === sel.id);
-      if (movedSel && capMove?.capture && (toggles.chainCapture || ruleSet.moves.some((m: MoveRule) => m.onCapture?.chain))) {
-        const further = getValidMoves(movedSel, newOccs, tiling, ruleSet, width, height, toggles, logicTriples).filter((m: any) => m.capture);
-        if (further.length > 0) {
-          setOccupants(newOccs);
-          setSelectedId(sel.id);
-          setValidMoves(further);
-          setChainCaptureActive(true);
-          const out = checkOutcome(newOccs, currentTurn);
-          if (out) setOutcome(out);
-          return;
-        }
-      }
-
-      setOccupants(newOccs);
-      setChainCaptureActive(false);
-      const out = checkOutcome(newOccs, currentTurn);
-      if (out) setOutcome(out);
-      else {
-        setCurrentTurn(nextTurn(ruleSet.turns, currentTurn, !!capMove?.capture));
-        setSelectedId(null);
-        setValidMoves([]);
-      }
+      finishMove(newOccs, sel.id, !!capMove?.capture);
     } else if (clickedOcc) {
       // Ownership gate for both turn disciplines; during an active chain only
       // the chaining piece may be touched.
@@ -475,6 +494,20 @@ export function GridViewport({
         {selectedOcc && selectedOcc.span.length > 0 && <button onClick={rotateSelected} className="px-2 py-1 rounded-full text-[10px] border bg-[var(--bg-3)] border-[var(--border)]">ROTATE ⟳ • tiling steps</button>}
         <span className="text-[10px] text-[var(--text-faint)]">SPAN: {selectedOcc ? `${selectedOcc.span.length + 1} cells • ${selectedOcc.span.length > 0 ? "multi-cell" : "single"}` : "none"} {selectedOcc?.guest ? `• GUEST:${selectedOcc.guest.kind}` : ""}</span>
       </div>}
+      {pendingPromotion && (
+        <div className="mb-2 flex items-center gap-2 text-[10px]">
+          <span className="font-bold tracking-[0.12em]">PROMOTE TO</span>
+          {pendingPromotion.options.map(t => (
+            <button
+              key={t}
+              onClick={() => choosePromotion(t)}
+              className="px-3 py-1 rounded-full border bg-[var(--bg-3)] border-[var(--accent)]"
+            >
+              {promotionSymbol(t)} {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="relative mx-auto mt-2" style={{ width: containerWidth, height: containerHeight, minHeight: containerHeight }}>
         {Array.from({ length: height }).map((_, r) =>

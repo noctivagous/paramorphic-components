@@ -207,6 +207,17 @@ export function evaluateOutcomes(
     if (cond.kind === "line") {
       const count = cond.count;
       const dirs = cond.directions === "any" ? tiling.directions.map(d => d.name) : (cond.directions as string[]) || tiling.directions.map(d => d.name);
+      // A configured region list restricts where the line may lie: every
+      // cell of the winning sequence must fall inside the listed regions.
+      // Absent, "all", or empty means the whole board (previous behavior).
+      let regionCells: Set<string> | null = null;
+      if (Array.isArray(cond.regions) && cond.regions.length > 0) {
+        regionCells = new Set();
+        for (const rid of cond.regions) {
+          const rg = ruleSet.regions.find(r => r.id === rid);
+          if (rg) for (const c of rg.cells) regionCells.add(`${c.q},${c.r}`);
+        }
+      }
       // for each cell that has occupant
       for (const occ of occupants) {
         const player = occ.data?.player || occ.type;
@@ -215,6 +226,7 @@ export function evaluateOutcomes(
           if (!tiling.directionMap[dir]) continue;
           const cells = lineCells(occ.anchor, dir, count, tiling, width, height);
           if (cells.length < count) continue;
+          if (regionCells && !cells.every(c => regionCells!.has(`${c.q},${c.r}`))) continue;
           // check all cells occupied by same player
           let allSame = true;
           for (const c of cells) {
@@ -416,4 +428,29 @@ export function countLiberties(cells: Pos[], occupants: Occupant[], tiling: Tili
     }
   }
   return libs;
+}
+
+// ---------- Promotion (choice, not auto-pick) ----------
+// A move whose destination lies in the rule's promotion region offers the
+// configured promotion types. One option applies silently; several wait for
+// an explicit choice, so a pawn never silently becomes whatever is listed
+// first. Symbol mapping preserves the established glyphs.
+export function promotionSymbol(type: string): string {
+  return type === "queen" ? "♕" : type === "king_w" ? "♔" : "♚";
+}
+
+export function promotionOptions(occ: Occupant, ruleSet: RuleSet, pos: Pos): string[] {
+  const rule = ruleSet.moves.find(mr => pieceMatchesRule(mr.pieceType, occ));
+  const regionId = rule?.onMove?.ifInRegion;
+  const promoteTo = rule?.onMove?.promoteTo;
+  if (!rule || !regionId || !promoteTo || promoteTo.length === 0) return [];
+  const region = ruleSet.regions.find(rg => rg.id === regionId);
+  if (!region || !isPosInRegion(pos, region)) return [];
+  return [...promoteTo];
+}
+
+export function applyPromotion(occupants: Occupant[], id: string, type: string): Occupant[] {
+  return occupants.map(o =>
+    o.id === id ? { ...o, type, data: { ...o.data, symbol: promotionSymbol(type) } } : o
+  );
 }

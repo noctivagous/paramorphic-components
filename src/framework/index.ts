@@ -11,6 +11,7 @@ export * from "./engine";
 export * from "./presets";
 export * from "./plan";
 export * from "./rule-sets";
+export * from "./rule-chains";
 export * from "./traversal";
 export * from "./editing";
 export * from "./derivation";
