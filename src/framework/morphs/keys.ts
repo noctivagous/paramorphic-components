@@ -2,7 +2,7 @@
 // The keyboard shell records layout changes through these morphs — never
 // through grid.* or sheet.* — so a keyboard plan reads as key definitions.
 // Wide keys (Space, Shift, Enter, Tab) are multi-cell occupants via span;
-// staggered rows are a view-only offset (KeyboardView), never state.
+// staggered rows are a view-only offset (GridViewport stagger), never state.
 // Live presses are session feedback (flash + tone) and are not recorded,
 // saved, or undone — exactly like player seeks. Registered on the shared
 // PlanState grid scope, so validation, replay, undo, and chain surgery run

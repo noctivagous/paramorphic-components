@@ -52,6 +52,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-04 — Keyboard geometry on the shared renderer
+
+`GridViewport` now handles the irregular geometry itself: `mergeSpans` merges multi-cell occupants into one box (covered cells skip; box math in the pure `mergedBox` helper), `stagger` offsets rows from the plan (`staggerForRow`, fallback `DEFAULT_STAGGER`), `chrome={false}` hides the game toolbar/footer, and `onOccupantTap`/`onEmptyTap` bypass game logic for presses and layout edits. The keyboard shell renders through it with neutered rules; the custom `KeyboardView.tsx` is deleted. Shared-vs-custom for the keyboard is now the 78-line `key.*` vocabulary plus shell wiring over the untouched core, viewport, and placement checks; game shells are unaffected (all new props optional/defaulted). `verify:replay` §31 pins the wiring and the merged-box math (183 total) with `typecheck` and all four builds green.
+
 ### 2026-11-04 — Three reported bugs fixed (slots, tree-save throw, grid checkpoint)
 
 Play mode dropped empty slots: it mapped anchors only, so Space (q=3) rendered against Alt (q=2). `KeyboardView` now renders `slotsForRow` (every column 0..width-1; empties hold position, covered span cells collapse into the anchor button) in both modes, and row offsets come from the plan (`interpretation.keyboard.stagger` via `staggerForRow`, `DEFAULT_STAGGER` fallback) instead of hardcoded constants. `chainForTreeSave` guarded its replay on a valid base: an invalid base with a valid chain threw in `cloneTreeState` instead of checkpointing a valid current state. `chainForSave`/`buildAppSave` are now fallible: a current board that fails `checkBoard` returns errors (surfaced in all three shells) instead of publishing a checkpoint its own loader rejects. `verify:replay` §30 pins all three (175 total, was 169) with `typecheck` and all four builds green. Open: the shared `GridViewport` still has no span/stagger geometry — the keyboard proves the state and morph machinery, not the shared renderer.

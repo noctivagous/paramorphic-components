@@ -5,9 +5,62 @@ import { buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occ
 import { makeId } from "../tilings";
 import { applySurroundCapture, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, ruleHasSurroundCapture } from "../engine";
 
+export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
+
+/**
+ * Slot-accurate row layout shared by every Grid renderer: every column
+ * 0..width-1 appears, so empty positions between wide keys hold their place
+ * instead of collapsing. Covered span cells are marked, not duplicated.
+ */
+export function slotsForRow(occupants: Occupant[], width: number, r: number): KeySlot[] {
+  const byCell = new Map<string, Occupant>();
+  for (const o of occupants) for (const c of getOccupiedCells(o)) byCell.set(`${c.q},${c.r}`, o);
+  return Array.from({ length: width }, (_, q) => {
+    const occ = byCell.get(`${q},${r}`) ?? null;
+    if (!occ) return { q, key: null, covered: false };
+    const isAnchor = occ.anchor.q === q && occ.anchor.r === r;
+    return { q, key: occ, covered: !isAnchor };
+  });
+}
+
+/** Fallback stagger when the plan carries no keyboard offsets. */
+export const DEFAULT_STAGGER = [0, 10, 20, 30, 48];
+
+/** Row offset in px, read from the plan (`interpretation.keyboard.stagger`). */
+export function staggerForRow(r: number, stagger: number[] | undefined): number {
+  const list = Array.isArray(stagger) && stagger.length > 0 ? stagger : DEFAULT_STAGGER;
+  return list[Math.min(r, list.length - 1)] ?? 0;
+}
+
+/** Merged box for a multi-cell occupant at a square cell size. Null when single-cell. */
+export function mergedBox(
+  occ: Occupant,
+  cellSize: number
+): { w: number; h: number; minQ: number; minR: number } | null {
+  if (occ.span.length === 0) return null;
+  const cells = getOccupiedCells(occ);
+  const qs = cells.map(c => c.q);
+  const rs = cells.map(c => c.r);
+  return {
+    w: (Math.max(...qs) - Math.min(...qs) + 1) * cellSize - 2,
+    h: (Math.max(...rs) - Math.min(...rs) + 1) * cellSize - 2,
+    minQ: Math.min(...qs),
+    minR: Math.min(...rs),
+  };
+}
+
 export type GridViewportProps = {
   occupants: Occupant[];
   setOccupants: React.Dispatch<React.SetStateAction<Occupant[]>>;
+  /** Merge multi-cell occupants into one box (wide keys); covered cells skip. */
+  mergeSpans?: boolean;
+  /** Per-row px offsets; extras reuse the last entry. */
+  stagger?: number[];
+  /** Hide the game toolbar and status footer (keyboard-style guests). */
+  chrome?: boolean;
+  /** Tap overrides: when set, bypass game logic for that cell. */
+  onOccupantTap?: (occ: Occupant) => void;
+  onEmptyTap?: (pos: Pos) => void;
   tiling: TilingDef;
   ruleSet: RuleSet;
   width: number;
@@ -51,7 +104,8 @@ export function DirectionCompass({ tiling }: { tiling: TilingDef }) {
 
 export function GridViewport({
   occupants, setOccupants, tiling, ruleSet, width, height, toggles, selectedId, setSelectedId, validMoves, setValidMoves,
-  currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo
+  currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo,
+  mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap
 }: GridViewportProps) {
   const cellSize = tiling.shape === "square" ? 44 : 40;
 
@@ -133,6 +187,17 @@ export function GridViewport({
   const handleCellClick = (q: number, r: number) => {
     if (outcome) return;
     const clickedOcc = mapOccupant.get(`${q},${r}`) || null;
+    // Explicit tap overrides bypass game logic (keyboard presses and layout
+    // edits). Covered span cells map to their anchor occupant, so tapping
+    // anywhere on a wide key presses the whole key.
+    if (clickedOcc && onOccupantTap) {
+      onOccupantTap(clickedOcc);
+      return;
+    }
+    if (!clickedOcc && onEmptyTap) {
+      onEmptyTap({ q, r });
+      return;
+    }
     const isValidTarget = validMoves.some((m: any) => m.q === q && m.r === r);
 
     // painter mode or free placement
@@ -300,26 +365,43 @@ export function GridViewport({
     return { bg, border, isValid, isSelected, isKnightLeap };
   };
 
-  const containerWidth = tiling.shape === "square" ? width * cellSize : width * cellSize * 0.88 + 30;
+  const maxStagger = stagger && stagger.length > 0 ? Math.max(...stagger) : 0;
+  const containerWidth = (tiling.shape === "square" ? width * cellSize : width * cellSize * 0.88 + 30) + maxStagger;
   const containerHeight = tiling.shape === "square" ? height * cellSize : height * cellSize * 0.78 + 30;
 
   const selectedOcc = occupants.find((o: Occupant) => o.id === selectedId);
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      <div className="flex flex-wrap gap-2 mb-2">
+      {chrome !== false && <div className="flex flex-wrap gap-2 mb-2">
         <button onClick={() => setShowRegions(!showRegions)} className={`px-2 py-1 rounded-full text-[10px] border ${showRegions ? "bg-[var(--accent)] text-black border-[var(--accent)]" : "bg-[var(--bg-3)] border-[var(--border)]"}`}>REGIONS {showRegions ? "ON" : "OFF"}</button>
         <button onClick={() => setKnightDemo(!knightDemo)} className={`px-2 py-1 rounded-full text-[10px] border ${knightDemo ? "bg-[#78b4ff] text-black border-[#78b4ff]" : "bg-[var(--bg-3)] border-[var(--border)]"}`}>KNIGHT LEAPS {knightDemo ? "ON" : "OFF"} • offset moves, not dir names</button>
         {selectedOcc && selectedOcc.span.length > 0 && <button onClick={rotateSelected} className="px-2 py-1 rounded-full text-[10px] border bg-[var(--bg-3)] border-[var(--border)]">ROTATE ⟳ • tiling steps</button>}
         <span className="text-[10px] text-[var(--text-faint)]">SPAN: {selectedOcc ? `${selectedOcc.span.length + 1} cells • ${selectedOcc.span.length > 0 ? "multi-cell" : "single"}` : "none"} {selectedOcc?.guest ? `• GUEST:${selectedOcc.guest.kind}` : ""}</span>
-      </div>
+      </div>}
 
       <div className="relative mx-auto mt-2" style={{ width: containerWidth, height: containerHeight, minHeight: containerHeight }}>
         {Array.from({ length: height }).map((_, r) =>
           Array.from({ length: width }).map((_, q) => {
             const { bg, border, isValid, isSelected, isKnightLeap } = getCellStyle(q, r);
-            let left = q * cellSize;
+            // Covered span cells collapse into their anchor's box when the
+            // guest renders merged geometry (wide keyboard keys).
+            const occHere = mapOccupant.get(`${q},${r}`);
+            const anchorHere = occHere && occHere.anchor.q === q && occHere.anchor.r === r;
+            if (mergeSpans && occHere && !anchorHere) return null;
+            let left = q * cellSize + staggerForRow(r, stagger);
             let top = r * cellSize;
+            let spanW = 0;
+            let spanH = 0;
+            if (mergeSpans && anchorHere) {
+              const box = mergedBox(occHere, cellSize);
+              if (box) {
+                spanW = box.w;
+                spanH = box.h;
+                left = box.minQ * cellSize + staggerForRow(r, stagger);
+                top = box.minR * cellSize;
+              }
+            }
             let clipPath: string | undefined;
             if (tiling.id === "hexH") {
               const size = 26;
@@ -343,8 +425,8 @@ export function GridViewport({
                 className="absolute flex items-center justify-center select-none cursor-pointer transition-all"
                 style={{
                   left, top,
-                  width: tiling.shape === "square" ? cellSize - 2 : 44,
-                  height: tiling.shape === "square" ? cellSize - 2 : 44,
+                  width: spanW > 0 ? spanW : tiling.shape === "square" ? cellSize - 2 : 44,
+                  height: spanH > 0 ? spanH : tiling.shape === "square" ? cellSize - 2 : 44,
                   background: bg,
                   border,
                   clipPath,
@@ -380,14 +462,14 @@ export function GridViewport({
 
       {outcome && <div className="mt-6 mx-auto px-4 py-2 rounded-full bg-[var(--accent)] text-black text-[11px] font-bold tracking-widest uppercase flex items-center gap-2"><span className="w-2 h-2 bg-black rounded-full animate-pulse" /> {outcome}</div>}
 
-      <div className="mt-4 flex flex-wrap gap-2 justify-center text-[10px] text-[var(--text-faint)]">
+      {chrome !== false && <div className="mt-4 flex flex-wrap gap-2 justify-center text-[10px] text-[var(--text-faint)]">
         <span>VALID MOVES DRIVEN BY <b className="text-[var(--text-dim)]">getValidMoves() generic, uses tiling.directionMap + leaps</b></span>
         <span className="opacity-30">•</span>
         <span>TILING: {tiling.id} dirs:{tiling.directions.map((d: TilingDir)=>d.name).join(",")}</span>
         <span className="opacity-30">•</span>
         <span>TURN: {currentTurn.toUpperCase()} • {ruleSet.turns.type}</span>
         {chainCaptureActive && <span className="text-[var(--accent)]">• CHAIN CAPTURE ACTIVE — CONTINUE</span>}
-      </div>
+      </div>}
 
       {selectedOcc?.guest && (
         <div className="mt-3 panel p-2">

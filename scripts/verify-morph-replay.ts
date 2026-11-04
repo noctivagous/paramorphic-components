@@ -31,7 +31,7 @@ import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, 
 import { gridRegistry } from "../src/framework/morphs/registry";
 import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
-import { slotsForRow, staggerForRow } from "../src/views/KeyboardView";
+import { mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
 
 let pass = 0;
@@ -999,6 +999,31 @@ for (const f of files) {
     errors: [],
   }, null);
   check("that checkpoint would load-reject", !badLoad.ok);
+}
+
+// 31. Keyboard geometry runs on the shared renderer, not a custom view.
+{
+  const kb = JSON.parse(readFileSync("apps/keyboard/morph-plans/keyboard.json", "utf8"));
+  const appSrc = readFileSync("apps/keyboard/src/App.tsx", "utf8");
+  check("keyboard renders through GridViewport",
+    appSrc.includes("GridViewport") && !appSrc.includes("KeyboardView"));
+  check("keyboard passes merged-span geometry",
+    appSrc.includes("mergeSpans") && appSrc.includes("stagger"));
+  const viewSrc = readFileSync("src/framework/components/GridViewport.tsx", "utf8");
+  check("shared viewport merges spans",
+    viewSrc.includes("mergeSpans") && viewSrc.includes("spanW"));
+  check("shared viewport staggers rows",
+    viewSrc.includes("staggerForRow(r, stagger)"));
+  check("shared viewport takes tap overrides",
+    viewSrc.includes("onOccupantTap") && viewSrc.includes("onEmptyTap"));
+  check("no custom keyboard view remains",
+    !(() => { try { readFileSync("src/views/KeyboardView.tsx", "utf8"); return true; } catch { return false; } })());
+  const spaceBox = mergedBox(kb.occupants.find((o: any) => o.id === "key-space"), 44);
+  check("space merges to a 9-cell box at q=3",
+    !!spaceBox && spaceBox.w === 9 * 44 - 2 && spaceBox.minQ === 3 && spaceBox.minR === 4,
+    JSON.stringify(spaceBox));
+  check("single-cell keys need no box",
+    mergedBox(kb.occupants.find((o: any) => o.id === "key-Q"), 44) === null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

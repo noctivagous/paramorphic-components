@@ -2,10 +2,15 @@
 // files. Keys enter and leave through the key.* vocabulary and loadPlan, so a
 // corrupt file can never become a broken board. Live presses are session
 // state: they flash and sound but are never recorded, saved, or undone.
-import React, { useRef, useState } from "react";
-import { KeyboardView } from "../../../src/views/KeyboardView";
-import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
-import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
+//
+// The keyboard renders through the shared GridViewport — merged span boxes
+// for wide keys, plan-driven row stagger, no game chrome — so the irregular
+// geometry is shared-renderer behavior, not a custom view. Presses and layout
+// edits arrive as tap overrides; game logic never runs (moves are neutered).
+import React, { useMemo, useRef, useState } from "react";
+import { GridViewport, getTiling, loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
+import { createToneTrigger } from "../../../src/framework/adapters/audio";
+import type { AppliedMorph, HistoryStep, Occupant, PlanBase, Pos } from "../../../src/framework";
 import { PLANS } from "./plans";
 import { buildKeyboardSave, type KeyboardSettings } from "./save";
 
@@ -69,6 +74,8 @@ function diffToKeyMorph(prev: Occupant[], next: Occupant[]): AppliedMorph | null
   };
 }
 
+const OFF_TOGGLES = { gravity: false, diagonal: false, sliding: false, wrapping: false, chainCapture: false };
+
 export default function App() {
   const [occupants, setOccupantsState] = useState<Occupant[]>(() => bootPlan?.occupants ?? seed.occupants);
   const [size, setSize] = useState(() => ({
@@ -87,7 +94,26 @@ export default function App() {
   // never the seed's, so an opened plan round-trips its rules and view.
   const [settings, setSettings] = useState<KeyboardSettings>(() => bootSettings);
   const [notice, setNotice] = useState<string | null>(null);
+  const [edit, setEdit] = useState(false);
+  const [lastPress, setLastPress] = useState<string>("none yet — click a key");
   const fileRef = useRef<HTMLInputElement>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const trigRef = useRef<ReturnType<typeof createToneTrigger> | null>(null);
+
+  // Shared-viewport shell state. Game logic never runs: moves are neutered
+  // below and taps are overridden, so turns/outcome stay at their seeds.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [validMoves, setValidMoves] = useState<Pos[]>([]);
+  const [currentTurn] = useState("typist");
+  const [outcome, setOutcome] = useState<string | null>(null);
+  const [chainCaptureActive, setChainCaptureActive] = useState(false);
+  const [showRegions, setShowRegions] = useState(false);
+  const [knightDemo, setKnightDemo] = useState(false);
+
+  const tiling = useMemo(() => getTiling((settings.tilingId as any) ?? "square8"), [settings.tilingId]);
+  // Neutered rules: no moves, so untapped empty cells only deselect.
+  const viewRules = useMemo(() => ({ ...settings.ruleSet, moves: [] }), [settings.ruleSet]);
+  const stagger = settings.interpretation?.keyboard?.stagger as number[] | undefined;
 
   const stateOf = (list: Occupant[]) => ({ occupants: list, width: size.w, height: size.h });
 
@@ -95,6 +121,41 @@ export default function App() {
     setPast(p => pushHistory(p, stateOf(occupants), diffToKeyMorph(occupants, next)));
     setFuture([]);
     setOccupantsState(next);
+  };
+
+  // GridViewport speaks setState dispatch; taps resolve against the current
+  // render's occupants and record through the key.* history path.
+  const dispatchOccupants: React.Dispatch<React.SetStateAction<Occupant[]>> = action => {
+    const next = typeof action === "function" ? (action as (p: Occupant[]) => Occupant[])(occupants) : action;
+    push(next);
+  };
+
+  const tone = (freq: number) => {
+    try {
+      if (!ctxRef.current) {
+        ctxRef.current = new AudioContext();
+        trigRef.current = createToneTrigger(ctxRef.current);
+      }
+      trigRef.current?.(freq, 0.15, 0.6);
+    } catch {
+      /* headless or blocked audio stays silent */
+    }
+  };
+
+  const press = (o: Occupant) => {
+    const n = Number((o.data as any)?.pitch);
+    tone(Number.isFinite(n) ? 220 * Math.pow(2, n / 12) : 440);
+    setSelectedId(o.id);
+    setLastPress(`${(o.data as any)?.label ?? o.id}`);
+  };
+
+  const addKey = (pos: Pos) => {
+    const id = `key-${pos.q}-${pos.r}`;
+    if (occupants.some(o => o.id === id)) return;
+    push([
+      ...occupants,
+      { id, anchor: { ...pos }, span: [], type: "key", data: { label: `K${pos.q},${pos.r}`, pitch: (pos.r * 2 + pos.q) % 12 }, tags: [] },
+    ]);
   };
 
   const reset = (
@@ -114,6 +175,7 @@ export default function App() {
     setSize({ w, h });
     setErrors([]);
     setNotice(null);
+    setSelectedId(null);
   };
 
   const undo = () => {
@@ -203,7 +265,7 @@ export default function App() {
       </div>
       <h1 className="text-[15px] font-bold">Keys from a morph-plan</h1>
       <div className="mt-1 text-[10px] text-[var(--text-faint)]">
-        {occupants.length} keys • {wide} wide • {size.w}×{size.h} grid • stagger is view-only
+        {occupants.length} keys • {wide} wide • {size.w}×{size.h} grid • shared GridViewport, stagger from plan
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1">
         <span className="text-[10px] text-[var(--text-faint)]">File</span>
@@ -234,6 +296,15 @@ export default function App() {
         <button className={btn} disabled={future.length === 0} onClick={redo}>
           REDO
         </button>
+        <button
+          className={btn}
+          onClick={() => setEdit(v => !v)}
+        >
+          {edit ? "DONE EDITING" : "EDIT LAYOUT"}
+        </button>
+        <span className="text-[10px] text-[var(--text-faint)]">
+          {edit ? "tap empty cell adds • tap key removes" : `last press: ${lastPress}`}
+        </span>
       </div>
       {errors.length > 0 && (
         <div className="mt-2 p-2 rounded-[8px] bg-[rgba(255,90,60,0.12)] border border-[#ff5a3c] text-[9px] text-[#ff8a6b]">
@@ -251,7 +322,36 @@ export default function App() {
         </div>
       )}
       <div className="mt-3">
-        <KeyboardView occupants={occupants} setOccupants={push} width={size.w} height={size.h} stagger={settings.interpretation?.keyboard?.stagger} />
+        <GridViewport
+          occupants={occupants}
+          setOccupants={dispatchOccupants}
+          tiling={tiling}
+          ruleSet={viewRules}
+          width={size.w}
+          height={size.h}
+          toggles={OFF_TOGGLES}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
+          validMoves={validMoves}
+          setValidMoves={setValidMoves}
+          currentTurn={currentTurn}
+          setCurrentTurn={() => {}}
+          outcome={outcome}
+          setOutcome={setOutcome}
+          chainCaptureActive={chainCaptureActive}
+          setChainCaptureActive={setChainCaptureActive}
+          logicTriples={[]}
+          showRegions={showRegions}
+          setShowRegions={setShowRegions}
+          showSpan={false}
+          knightDemo={knightDemo}
+          setKnightDemo={setKnightDemo}
+          mergeSpans
+          stagger={stagger}
+          chrome={false}
+          onOccupantTap={edit ? o => push(occupants.filter(x => x.id !== o.id)) : press}
+          onEmptyTap={edit ? addKey : undefined}
+        />
       </div>
     </div>
   );
