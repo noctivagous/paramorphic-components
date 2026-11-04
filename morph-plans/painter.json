@@ -1,0 +1,125 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "painter",
+  "ruleSet": {
+    "id": "painter",
+    "setup": {
+      "width": 12,
+      "height": 12,
+      "description": "Toggle paint, span 1, uses tiling style 3color"
+    },
+    "moves": [
+      {
+        "pieceType": "*",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "painter"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "manual",
+      "action": "none"
+    },
+    "regions": []
+  },
+  "width": 12,
+  "height": 12,
+  "occupants": [],
+  "regions": [],
+  "turns": {
+    "type": "free",
+    "order": [],
+    "first": "painter"
+  },
+  "outcomes": [],
+  "interpretation": {
+    "view": "game",
+    "game": "painter"
+  },
+  "base": {
+    "occupants": [],
+    "width": 12,
+    "height": 12
+  },
+  "morphs": [],
+  "ruleBase": {
+    "id": "painter",
+    "setup": {
+      "width": 12,
+      "height": 12,
+      "description": "Toggle paint, span 1, uses tiling style 3color"
+    },
+    "moves": [],
+    "turns": {
+      "type": "free"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "manual",
+      "action": "stop"
+    },
+    "regions": []
+  },
+  "ruleMorphs": [
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "*",
+          "moves": [
+            {
+              "type": "place",
+              "anywhere": true
+            }
+          ],
+          "capture": "move"
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.setTurns",
+      "params": {
+        "turns": {
+          "type": "free",
+          "order": [],
+          "first": "painter"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "type": "free"
+        }
+      }
+    },
+    {
+      "name": "rule.setEnd",
+      "params": {
+        "end": {
+          "condition": "manual",
+          "action": "none"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "condition": "manual",
+          "action": "stop"
+        }
+      }
+    }
+  ]
+}

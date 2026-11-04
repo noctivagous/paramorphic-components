@@ -1,0 +1,193 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "tictactoe",
+  "ruleSet": {
+    "id": "tictactoe",
+    "setup": {
+      "width": 3,
+      "height": 3,
+      "description": "Placement, line 3 wins, works on any tiling via line()"
+    },
+    "moves": [
+      {
+        "pieceType": "*",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "alternating",
+      "order": [
+        "X",
+        "O"
+      ],
+      "first": "X"
+    },
+    "outcomes": [
+      {
+        "kind": "line",
+        "player": "any",
+        "count": 3,
+        "directions": "any",
+        "regions": "all"
+      },
+      {
+        "kind": "boardFull",
+        "draw": true
+      }
+    ],
+    "end": {
+      "condition": "anyOutcome",
+      "action": "stop"
+    },
+    "regions": []
+  },
+  "width": 3,
+  "height": 3,
+  "occupants": [],
+  "regions": [],
+  "turns": {
+    "type": "alternating",
+    "order": [
+      "X",
+      "O"
+    ],
+    "first": "X"
+  },
+  "outcomes": [
+    {
+      "kind": "line",
+      "player": "any",
+      "count": 3,
+      "directions": "any",
+      "regions": "all"
+    },
+    {
+      "kind": "boardFull",
+      "draw": true
+    }
+  ],
+  "interpretation": {
+    "view": "game",
+    "game": "tictactoe"
+  },
+  "base": {
+    "occupants": [],
+    "width": 3,
+    "height": 3
+  },
+  "morphs": [],
+  "ruleBase": {
+    "id": "tictactoe",
+    "setup": {
+      "width": 3,
+      "height": 3,
+      "description": "Placement, line 3 wins, works on any tiling via line()"
+    },
+    "moves": [],
+    "turns": {
+      "type": "free"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "manual",
+      "action": "stop"
+    },
+    "regions": []
+  },
+  "ruleMorphs": [
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "*",
+          "moves": [
+            {
+              "type": "place",
+              "anywhere": true
+            }
+          ],
+          "capture": "move"
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.setTurns",
+      "params": {
+        "turns": {
+          "type": "alternating",
+          "order": [
+            "X",
+            "O"
+          ],
+          "first": "X"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "type": "free"
+        }
+      }
+    },
+    {
+      "name": "rule.addOutcome",
+      "params": {
+        "outcome": {
+          "kind": "line",
+          "player": "any",
+          "count": 3,
+          "directions": "any",
+          "regions": "all"
+        }
+      },
+      "inverse": {
+        "prev": []
+      }
+    },
+    {
+      "name": "rule.addOutcome",
+      "params": {
+        "outcome": {
+          "kind": "boardFull",
+          "draw": true
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "kind": "line",
+            "player": "any",
+            "count": 3,
+            "directions": "any",
+            "regions": "all"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.setEnd",
+      "params": {
+        "end": {
+          "condition": "anyOutcome",
+          "action": "stop"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "condition": "manual",
+          "action": "stop"
+        }
+      }
+    }
+  ]
+}

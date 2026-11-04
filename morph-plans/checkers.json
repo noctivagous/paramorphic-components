@@ -1,0 +1,2989 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "checkers",
+  "ruleSet": {
+    "id": "checkers",
+    "setup": {
+      "width": 8,
+      "height": 8,
+      "description": "Dark only, leap capture, chain, promotion via region"
+    },
+    "moves": [
+      {
+        "pieceType": "man_w",
+        "moves": [
+          {
+            "type": "step",
+            "dir": "NE"
+          },
+          {
+            "type": "step",
+            "dir": "NW"
+          },
+          {
+            "type": "leap",
+            "offsets": [
+              {
+                "dq": 2,
+                "dr": -2,
+                "axial": {
+                  "q": 2,
+                  "r": -2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": -2,
+                "axial": {
+                  "q": -2,
+                  "r": 0
+                }
+              }
+            ]
+          }
+        ],
+        "capture": "both",
+        "jumpOver": true,
+        "requires": {
+          "darkOnly": true
+        },
+        "onCapture": {
+          "chain": true
+        },
+        "onMove": {
+          "promoteTo": [
+            "king_w"
+          ],
+          "ifInRegion": "promotion-white"
+        }
+      },
+      {
+        "pieceType": "man_b",
+        "moves": [
+          {
+            "type": "step",
+            "dir": "SE"
+          },
+          {
+            "type": "step",
+            "dir": "SW"
+          },
+          {
+            "type": "leap",
+            "offsets": [
+              {
+                "dq": 2,
+                "dr": 2,
+                "axial": {
+                  "q": 0,
+                  "r": 2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": 2,
+                "axial": {
+                  "q": -2,
+                  "r": 2
+                }
+              }
+            ]
+          }
+        ],
+        "capture": "both",
+        "jumpOver": true,
+        "requires": {
+          "darkOnly": true
+        },
+        "onCapture": {
+          "chain": true
+        },
+        "onMove": {
+          "promoteTo": [
+            "king_b"
+          ],
+          "ifInRegion": "promotion-black"
+        }
+      },
+      {
+        "pieceType": "king_w",
+        "moves": [
+          {
+            "type": "step",
+            "dir": "NE"
+          },
+          {
+            "type": "step",
+            "dir": "NW"
+          },
+          {
+            "type": "step",
+            "dir": "SE"
+          },
+          {
+            "type": "step",
+            "dir": "SW"
+          },
+          {
+            "type": "slide",
+            "dir": "NE",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "NW",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "SE",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "SW",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "leap",
+            "offsets": [
+              {
+                "dq": 2,
+                "dr": -2,
+                "axial": {
+                  "q": 2,
+                  "r": -2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": -2,
+                "axial": {
+                  "q": -2,
+                  "r": 0
+                }
+              },
+              {
+                "dq": 2,
+                "dr": 2,
+                "axial": {
+                  "q": 0,
+                  "r": 2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": 2,
+                "axial": {
+                  "q": -2,
+                  "r": 2
+                }
+              }
+            ]
+          }
+        ],
+        "capture": "both",
+        "jumpOver": true,
+        "requires": {
+          "darkOnly": true
+        },
+        "onCapture": {
+          "chain": true
+        }
+      },
+      {
+        "pieceType": "king_b",
+        "moves": [
+          {
+            "type": "step",
+            "dir": "NE"
+          },
+          {
+            "type": "step",
+            "dir": "NW"
+          },
+          {
+            "type": "step",
+            "dir": "SE"
+          },
+          {
+            "type": "step",
+            "dir": "SW"
+          },
+          {
+            "type": "slide",
+            "dir": "NE",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "NW",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "SE",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "slide",
+            "dir": "SW",
+            "min": 1,
+            "max": 2
+          },
+          {
+            "type": "leap",
+            "offsets": [
+              {
+                "dq": 2,
+                "dr": -2,
+                "axial": {
+                  "q": 2,
+                  "r": -2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": -2,
+                "axial": {
+                  "q": -2,
+                  "r": 0
+                }
+              },
+              {
+                "dq": 2,
+                "dr": 2,
+                "axial": {
+                  "q": 0,
+                  "r": 2
+                }
+              },
+              {
+                "dq": -2,
+                "dr": 2,
+                "axial": {
+                  "q": -2,
+                  "r": 2
+                }
+              }
+            ]
+          }
+        ],
+        "capture": "both",
+        "jumpOver": true,
+        "requires": {
+          "darkOnly": true
+        },
+        "onCapture": {
+          "chain": true
+        }
+      }
+    ],
+    "turns": {
+      "type": "samePlayerIfCapture",
+      "order": [
+        "white",
+        "black"
+      ],
+      "first": "white"
+    },
+    "outcomes": [
+      {
+        "kind": "captureAll",
+        "player": "black"
+      },
+      {
+        "kind": "captureAll",
+        "player": "white"
+      },
+      {
+        "kind": "noMoves",
+        "player": "opponent"
+      }
+    ],
+    "end": {
+      "condition": "anyOutcome",
+      "action": "stop"
+    },
+    "regions": [
+      {
+        "id": "edge-top",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": 0
+          },
+          {
+            "q": 3,
+            "r": 0
+          },
+          {
+            "q": 4,
+            "r": 0
+          },
+          {
+            "q": 5,
+            "r": 0
+          },
+          {
+            "q": 6,
+            "r": 0
+          },
+          {
+            "q": 7,
+            "r": 0
+          }
+        ],
+        "type": "edge"
+      },
+      {
+        "id": "edge-bottom",
+        "cells": [
+          {
+            "q": 0,
+            "r": 7
+          },
+          {
+            "q": 1,
+            "r": 7
+          },
+          {
+            "q": 2,
+            "r": 7
+          },
+          {
+            "q": 3,
+            "r": 7
+          },
+          {
+            "q": 4,
+            "r": 7
+          },
+          {
+            "q": 5,
+            "r": 7
+          },
+          {
+            "q": 6,
+            "r": 7
+          },
+          {
+            "q": 7,
+            "r": 7
+          }
+        ],
+        "type": "edge"
+      },
+      {
+        "id": "edge-left",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 0,
+            "r": 1
+          },
+          {
+            "q": 0,
+            "r": 2
+          },
+          {
+            "q": 0,
+            "r": 3
+          },
+          {
+            "q": 0,
+            "r": 4
+          },
+          {
+            "q": 0,
+            "r": 5
+          },
+          {
+            "q": 0,
+            "r": 6
+          },
+          {
+            "q": 0,
+            "r": 7
+          }
+        ],
+        "type": "edge"
+      },
+      {
+        "id": "edge-right",
+        "cells": [
+          {
+            "q": 7,
+            "r": 0
+          },
+          {
+            "q": 7,
+            "r": 1
+          },
+          {
+            "q": 7,
+            "r": 2
+          },
+          {
+            "q": 7,
+            "r": 3
+          },
+          {
+            "q": 7,
+            "r": 4
+          },
+          {
+            "q": 7,
+            "r": 5
+          },
+          {
+            "q": 7,
+            "r": 6
+          },
+          {
+            "q": 7,
+            "r": 7
+          }
+        ],
+        "type": "edge"
+      },
+      {
+        "id": "promotion-white",
+        "cells": [
+          {
+            "q": 0,
+            "r": 0
+          },
+          {
+            "q": 1,
+            "r": 0
+          },
+          {
+            "q": 2,
+            "r": 0
+          },
+          {
+            "q": 3,
+            "r": 0
+          },
+          {
+            "q": 4,
+            "r": 0
+          },
+          {
+            "q": 5,
+            "r": 0
+          },
+          {
+            "q": 6,
+            "r": 0
+          },
+          {
+            "q": 7,
+            "r": 0
+          }
+        ],
+        "type": "edge"
+      },
+      {
+        "id": "promotion-black",
+        "cells": [
+          {
+            "q": 0,
+            "r": 7
+          },
+          {
+            "q": 1,
+            "r": 7
+          },
+          {
+            "q": 2,
+            "r": 7
+          },
+          {
+            "q": 3,
+            "r": 7
+          },
+          {
+            "q": 4,
+            "r": 7
+          },
+          {
+            "q": 5,
+            "r": 7
+          },
+          {
+            "q": 6,
+            "r": 7
+          },
+          {
+            "q": 7,
+            "r": 7
+          }
+        ],
+        "type": "edge"
+      }
+    ]
+  },
+  "width": 8,
+  "height": 8,
+  "occupants": [
+    {
+      "id": "man_b-q1-r0",
+      "anchor": {
+        "q": 1,
+        "r": 0
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q3-r0",
+      "anchor": {
+        "q": 3,
+        "r": 0
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q5-r0",
+      "anchor": {
+        "q": 5,
+        "r": 0
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q7-r0",
+      "anchor": {
+        "q": 7,
+        "r": 0
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q0-r1",
+      "anchor": {
+        "q": 0,
+        "r": 1
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q2-r1",
+      "anchor": {
+        "q": 2,
+        "r": 1
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q4-r1",
+      "anchor": {
+        "q": 4,
+        "r": 1
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q6-r1",
+      "anchor": {
+        "q": 6,
+        "r": 1
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q1-r2",
+      "anchor": {
+        "q": 1,
+        "r": 2
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q3-r2",
+      "anchor": {
+        "q": 3,
+        "r": 2
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q5-r2",
+      "anchor": {
+        "q": 5,
+        "r": 2
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_b-q7-r2",
+      "anchor": {
+        "q": 7,
+        "r": 2
+      },
+      "span": [],
+      "type": "man_b",
+      "data": {
+        "player": "black",
+        "symbol": "●",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q0-r5",
+      "anchor": {
+        "q": 0,
+        "r": 5
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q2-r5",
+      "anchor": {
+        "q": 2,
+        "r": 5
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q4-r5",
+      "anchor": {
+        "q": 4,
+        "r": 5
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q6-r5",
+      "anchor": {
+        "q": 6,
+        "r": 5
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q1-r6",
+      "anchor": {
+        "q": 1,
+        "r": 6
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q3-r6",
+      "anchor": {
+        "q": 3,
+        "r": 6
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q5-r6",
+      "anchor": {
+        "q": 5,
+        "r": 6
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q7-r6",
+      "anchor": {
+        "q": 7,
+        "r": 6
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q0-r7",
+      "anchor": {
+        "q": 0,
+        "r": 7
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q2-r7",
+      "anchor": {
+        "q": 2,
+        "r": 7
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q4-r7",
+      "anchor": {
+        "q": 4,
+        "r": 7
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    },
+    {
+      "id": "man_w-q6-r7",
+      "anchor": {
+        "q": 6,
+        "r": 7
+      },
+      "span": [],
+      "type": "man_w",
+      "data": {
+        "player": "white",
+        "symbol": "○",
+        "hasMoved": false
+      },
+      "tags": []
+    }
+  ],
+  "regions": [
+    {
+      "id": "edge-top",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        },
+        {
+          "q": 5,
+          "r": 0
+        },
+        {
+          "q": 6,
+          "r": 0
+        },
+        {
+          "q": 7,
+          "r": 0
+        }
+      ],
+      "type": "edge"
+    },
+    {
+      "id": "edge-bottom",
+      "cells": [
+        {
+          "q": 0,
+          "r": 7
+        },
+        {
+          "q": 1,
+          "r": 7
+        },
+        {
+          "q": 2,
+          "r": 7
+        },
+        {
+          "q": 3,
+          "r": 7
+        },
+        {
+          "q": 4,
+          "r": 7
+        },
+        {
+          "q": 5,
+          "r": 7
+        },
+        {
+          "q": 6,
+          "r": 7
+        },
+        {
+          "q": 7,
+          "r": 7
+        }
+      ],
+      "type": "edge"
+    },
+    {
+      "id": "edge-left",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 0,
+          "r": 1
+        },
+        {
+          "q": 0,
+          "r": 2
+        },
+        {
+          "q": 0,
+          "r": 3
+        },
+        {
+          "q": 0,
+          "r": 4
+        },
+        {
+          "q": 0,
+          "r": 5
+        },
+        {
+          "q": 0,
+          "r": 6
+        },
+        {
+          "q": 0,
+          "r": 7
+        }
+      ],
+      "type": "edge"
+    },
+    {
+      "id": "edge-right",
+      "cells": [
+        {
+          "q": 7,
+          "r": 0
+        },
+        {
+          "q": 7,
+          "r": 1
+        },
+        {
+          "q": 7,
+          "r": 2
+        },
+        {
+          "q": 7,
+          "r": 3
+        },
+        {
+          "q": 7,
+          "r": 4
+        },
+        {
+          "q": 7,
+          "r": 5
+        },
+        {
+          "q": 7,
+          "r": 6
+        },
+        {
+          "q": 7,
+          "r": 7
+        }
+      ],
+      "type": "edge"
+    },
+    {
+      "id": "promotion-white",
+      "cells": [
+        {
+          "q": 0,
+          "r": 0
+        },
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        },
+        {
+          "q": 5,
+          "r": 0
+        },
+        {
+          "q": 6,
+          "r": 0
+        },
+        {
+          "q": 7,
+          "r": 0
+        }
+      ],
+      "type": "edge"
+    },
+    {
+      "id": "promotion-black",
+      "cells": [
+        {
+          "q": 0,
+          "r": 7
+        },
+        {
+          "q": 1,
+          "r": 7
+        },
+        {
+          "q": 2,
+          "r": 7
+        },
+        {
+          "q": 3,
+          "r": 7
+        },
+        {
+          "q": 4,
+          "r": 7
+        },
+        {
+          "q": 5,
+          "r": 7
+        },
+        {
+          "q": 6,
+          "r": 7
+        },
+        {
+          "q": 7,
+          "r": 7
+        }
+      ],
+      "type": "edge"
+    }
+  ],
+  "turns": {
+    "type": "samePlayerIfCapture",
+    "order": [
+      "white",
+      "black"
+    ],
+    "first": "white"
+  },
+  "outcomes": [
+    {
+      "kind": "captureAll",
+      "player": "black"
+    },
+    {
+      "kind": "captureAll",
+      "player": "white"
+    },
+    {
+      "kind": "noMoves",
+      "player": "opponent"
+    }
+  ],
+  "interpretation": {
+    "view": "game",
+    "game": "checkers"
+  },
+  "base": {
+    "occupants": [],
+    "width": 8,
+    "height": 8
+  },
+  "morphs": [
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q1-r0",
+          "anchor": {
+            "q": 1,
+            "r": 0
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q3-r0",
+          "anchor": {
+            "q": 3,
+            "r": 0
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q5-r0",
+          "anchor": {
+            "q": 5,
+            "r": 0
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q7-r0",
+          "anchor": {
+            "q": 7,
+            "r": 0
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q0-r1",
+          "anchor": {
+            "q": 0,
+            "r": 1
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q2-r1",
+          "anchor": {
+            "q": 2,
+            "r": 1
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q4-r1",
+          "anchor": {
+            "q": 4,
+            "r": 1
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q6-r1",
+          "anchor": {
+            "q": 6,
+            "r": 1
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q1-r2",
+          "anchor": {
+            "q": 1,
+            "r": 2
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q3-r2",
+          "anchor": {
+            "q": 3,
+            "r": 2
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q5-r2",
+          "anchor": {
+            "q": 5,
+            "r": 2
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_b-q7-r2",
+          "anchor": {
+            "q": 7,
+            "r": 2
+          },
+          "span": [],
+          "type": "man_b",
+          "data": {
+            "player": "black",
+            "symbol": "●",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q0-r5",
+          "anchor": {
+            "q": 0,
+            "r": 5
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q2-r5",
+          "anchor": {
+            "q": 2,
+            "r": 5
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q4-r5",
+          "anchor": {
+            "q": 4,
+            "r": 5
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q6-r5",
+          "anchor": {
+            "q": 6,
+            "r": 5
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q1-r6",
+          "anchor": {
+            "q": 1,
+            "r": 6
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q3-r6",
+          "anchor": {
+            "q": 3,
+            "r": 6
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q5-r6",
+          "anchor": {
+            "q": 5,
+            "r": 6
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q7-r6",
+          "anchor": {
+            "q": 7,
+            "r": 6
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q0-r7",
+          "anchor": {
+            "q": 0,
+            "r": 7
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q2-r7",
+          "anchor": {
+            "q": 2,
+            "r": 7
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q4-r7",
+          "anchor": {
+            "q": 4,
+            "r": 7
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "grid.upsertOccupant",
+      "params": {
+        "occ": {
+          "id": "man_w-q6-r7",
+          "anchor": {
+            "q": 6,
+            "r": 7
+          },
+          "span": [],
+          "type": "man_w",
+          "data": {
+            "player": "white",
+            "symbol": "○",
+            "hasMoved": false
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ],
+  "ruleBase": {
+    "id": "checkers",
+    "setup": {
+      "width": 8,
+      "height": 8,
+      "description": "Dark only, leap capture, chain, promotion via region"
+    },
+    "moves": [],
+    "turns": {
+      "type": "free"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "manual",
+      "action": "stop"
+    },
+    "regions": []
+  },
+  "ruleMorphs": [
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "edge-top",
+          "cells": [
+            {
+              "q": 0,
+              "r": 0
+            },
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            },
+            {
+              "q": 4,
+              "r": 0
+            },
+            {
+              "q": 5,
+              "r": 0
+            },
+            {
+              "q": 6,
+              "r": 0
+            },
+            {
+              "q": 7,
+              "r": 0
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": []
+      }
+    },
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "edge-bottom",
+          "cells": [
+            {
+              "q": 0,
+              "r": 7
+            },
+            {
+              "q": 1,
+              "r": 7
+            },
+            {
+              "q": 2,
+              "r": 7
+            },
+            {
+              "q": 3,
+              "r": 7
+            },
+            {
+              "q": 4,
+              "r": 7
+            },
+            {
+              "q": 5,
+              "r": 7
+            },
+            {
+              "q": 6,
+              "r": 7
+            },
+            {
+              "q": 7,
+              "r": 7
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "id": "edge-top",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "edge-left",
+          "cells": [
+            {
+              "q": 0,
+              "r": 0
+            },
+            {
+              "q": 0,
+              "r": 1
+            },
+            {
+              "q": 0,
+              "r": 2
+            },
+            {
+              "q": 0,
+              "r": 3
+            },
+            {
+              "q": 0,
+              "r": 4
+            },
+            {
+              "q": 0,
+              "r": 5
+            },
+            {
+              "q": 0,
+              "r": 6
+            },
+            {
+              "q": 0,
+              "r": 7
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "id": "edge-top",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-bottom",
+            "cells": [
+              {
+                "q": 0,
+                "r": 7
+              },
+              {
+                "q": 1,
+                "r": 7
+              },
+              {
+                "q": 2,
+                "r": 7
+              },
+              {
+                "q": 3,
+                "r": 7
+              },
+              {
+                "q": 4,
+                "r": 7
+              },
+              {
+                "q": 5,
+                "r": 7
+              },
+              {
+                "q": 6,
+                "r": 7
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "edge-right",
+          "cells": [
+            {
+              "q": 7,
+              "r": 0
+            },
+            {
+              "q": 7,
+              "r": 1
+            },
+            {
+              "q": 7,
+              "r": 2
+            },
+            {
+              "q": 7,
+              "r": 3
+            },
+            {
+              "q": 7,
+              "r": 4
+            },
+            {
+              "q": 7,
+              "r": 5
+            },
+            {
+              "q": 7,
+              "r": 6
+            },
+            {
+              "q": 7,
+              "r": 7
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "id": "edge-top",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-bottom",
+            "cells": [
+              {
+                "q": 0,
+                "r": 7
+              },
+              {
+                "q": 1,
+                "r": 7
+              },
+              {
+                "q": 2,
+                "r": 7
+              },
+              {
+                "q": 3,
+                "r": 7
+              },
+              {
+                "q": 4,
+                "r": 7
+              },
+              {
+                "q": 5,
+                "r": 7
+              },
+              {
+                "q": 6,
+                "r": 7
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-left",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 0,
+                "r": 1
+              },
+              {
+                "q": 0,
+                "r": 2
+              },
+              {
+                "q": 0,
+                "r": 3
+              },
+              {
+                "q": 0,
+                "r": 4
+              },
+              {
+                "q": 0,
+                "r": 5
+              },
+              {
+                "q": 0,
+                "r": 6
+              },
+              {
+                "q": 0,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "promotion-white",
+          "cells": [
+            {
+              "q": 0,
+              "r": 0
+            },
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            },
+            {
+              "q": 4,
+              "r": 0
+            },
+            {
+              "q": 5,
+              "r": 0
+            },
+            {
+              "q": 6,
+              "r": 0
+            },
+            {
+              "q": 7,
+              "r": 0
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "id": "edge-top",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-bottom",
+            "cells": [
+              {
+                "q": 0,
+                "r": 7
+              },
+              {
+                "q": 1,
+                "r": 7
+              },
+              {
+                "q": 2,
+                "r": 7
+              },
+              {
+                "q": 3,
+                "r": 7
+              },
+              {
+                "q": 4,
+                "r": 7
+              },
+              {
+                "q": 5,
+                "r": 7
+              },
+              {
+                "q": 6,
+                "r": 7
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-left",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 0,
+                "r": 1
+              },
+              {
+                "q": 0,
+                "r": 2
+              },
+              {
+                "q": 0,
+                "r": 3
+              },
+              {
+                "q": 0,
+                "r": 4
+              },
+              {
+                "q": 0,
+                "r": 5
+              },
+              {
+                "q": 0,
+                "r": 6
+              },
+              {
+                "q": 0,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-right",
+            "cells": [
+              {
+                "q": 7,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 1
+              },
+              {
+                "q": 7,
+                "r": 2
+              },
+              {
+                "q": 7,
+                "r": 3
+              },
+              {
+                "q": 7,
+                "r": 4
+              },
+              {
+                "q": 7,
+                "r": 5
+              },
+              {
+                "q": 7,
+                "r": 6
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addRegion",
+      "params": {
+        "region": {
+          "id": "promotion-black",
+          "cells": [
+            {
+              "q": 0,
+              "r": 7
+            },
+            {
+              "q": 1,
+              "r": 7
+            },
+            {
+              "q": 2,
+              "r": 7
+            },
+            {
+              "q": 3,
+              "r": 7
+            },
+            {
+              "q": 4,
+              "r": 7
+            },
+            {
+              "q": 5,
+              "r": 7
+            },
+            {
+              "q": 6,
+              "r": 7
+            },
+            {
+              "q": 7,
+              "r": 7
+            }
+          ],
+          "type": "edge"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "id": "edge-top",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-bottom",
+            "cells": [
+              {
+                "q": 0,
+                "r": 7
+              },
+              {
+                "q": 1,
+                "r": 7
+              },
+              {
+                "q": 2,
+                "r": 7
+              },
+              {
+                "q": 3,
+                "r": 7
+              },
+              {
+                "q": 4,
+                "r": 7
+              },
+              {
+                "q": 5,
+                "r": 7
+              },
+              {
+                "q": 6,
+                "r": 7
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-left",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 0,
+                "r": 1
+              },
+              {
+                "q": 0,
+                "r": 2
+              },
+              {
+                "q": 0,
+                "r": 3
+              },
+              {
+                "q": 0,
+                "r": 4
+              },
+              {
+                "q": 0,
+                "r": 5
+              },
+              {
+                "q": 0,
+                "r": 6
+              },
+              {
+                "q": 0,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "edge-right",
+            "cells": [
+              {
+                "q": 7,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 1
+              },
+              {
+                "q": 7,
+                "r": 2
+              },
+              {
+                "q": 7,
+                "r": 3
+              },
+              {
+                "q": 7,
+                "r": 4
+              },
+              {
+                "q": 7,
+                "r": 5
+              },
+              {
+                "q": 7,
+                "r": 6
+              },
+              {
+                "q": 7,
+                "r": 7
+              }
+            ],
+            "type": "edge"
+          },
+          {
+            "id": "promotion-white",
+            "cells": [
+              {
+                "q": 0,
+                "r": 0
+              },
+              {
+                "q": 1,
+                "r": 0
+              },
+              {
+                "q": 2,
+                "r": 0
+              },
+              {
+                "q": 3,
+                "r": 0
+              },
+              {
+                "q": 4,
+                "r": 0
+              },
+              {
+                "q": 5,
+                "r": 0
+              },
+              {
+                "q": 6,
+                "r": 0
+              },
+              {
+                "q": 7,
+                "r": 0
+              }
+            ],
+            "type": "edge"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "man_w",
+          "moves": [
+            {
+              "type": "step",
+              "dir": "NE"
+            },
+            {
+              "type": "step",
+              "dir": "NW"
+            },
+            {
+              "type": "leap",
+              "offsets": [
+                {
+                  "dq": 2,
+                  "dr": -2,
+                  "axial": {
+                    "q": 2,
+                    "r": -2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": -2,
+                  "axial": {
+                    "q": -2,
+                    "r": 0
+                  }
+                }
+              ]
+            }
+          ],
+          "capture": "both",
+          "jumpOver": true,
+          "requires": {
+            "darkOnly": true
+          },
+          "onCapture": {
+            "chain": true
+          },
+          "onMove": {
+            "promoteTo": [
+              "king_w"
+            ],
+            "ifInRegion": "promotion-white"
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "man_b",
+          "moves": [
+            {
+              "type": "step",
+              "dir": "SE"
+            },
+            {
+              "type": "step",
+              "dir": "SW"
+            },
+            {
+              "type": "leap",
+              "offsets": [
+                {
+                  "dq": 2,
+                  "dr": 2,
+                  "axial": {
+                    "q": 0,
+                    "r": 2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": 2,
+                  "axial": {
+                    "q": -2,
+                    "r": 2
+                  }
+                }
+              ]
+            }
+          ],
+          "capture": "both",
+          "jumpOver": true,
+          "requires": {
+            "darkOnly": true
+          },
+          "onCapture": {
+            "chain": true
+          },
+          "onMove": {
+            "promoteTo": [
+              "king_b"
+            ],
+            "ifInRegion": "promotion-black"
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "king_w",
+          "moves": [
+            {
+              "type": "step",
+              "dir": "NE"
+            },
+            {
+              "type": "step",
+              "dir": "NW"
+            },
+            {
+              "type": "step",
+              "dir": "SE"
+            },
+            {
+              "type": "step",
+              "dir": "SW"
+            },
+            {
+              "type": "slide",
+              "dir": "NE",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "NW",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "SE",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "SW",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "leap",
+              "offsets": [
+                {
+                  "dq": 2,
+                  "dr": -2,
+                  "axial": {
+                    "q": 2,
+                    "r": -2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": -2,
+                  "axial": {
+                    "q": -2,
+                    "r": 0
+                  }
+                },
+                {
+                  "dq": 2,
+                  "dr": 2,
+                  "axial": {
+                    "q": 0,
+                    "r": 2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": 2,
+                  "axial": {
+                    "q": -2,
+                    "r": 2
+                  }
+                }
+              ]
+            }
+          ],
+          "capture": "both",
+          "jumpOver": true,
+          "requires": {
+            "darkOnly": true
+          },
+          "onCapture": {
+            "chain": true
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.addMove",
+      "params": {
+        "rule": {
+          "pieceType": "king_b",
+          "moves": [
+            {
+              "type": "step",
+              "dir": "NE"
+            },
+            {
+              "type": "step",
+              "dir": "NW"
+            },
+            {
+              "type": "step",
+              "dir": "SE"
+            },
+            {
+              "type": "step",
+              "dir": "SW"
+            },
+            {
+              "type": "slide",
+              "dir": "NE",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "NW",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "SE",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "slide",
+              "dir": "SW",
+              "min": 1,
+              "max": 2
+            },
+            {
+              "type": "leap",
+              "offsets": [
+                {
+                  "dq": 2,
+                  "dr": -2,
+                  "axial": {
+                    "q": 2,
+                    "r": -2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": -2,
+                  "axial": {
+                    "q": -2,
+                    "r": 0
+                  }
+                },
+                {
+                  "dq": 2,
+                  "dr": 2,
+                  "axial": {
+                    "q": 0,
+                    "r": 2
+                  }
+                },
+                {
+                  "dq": -2,
+                  "dr": 2,
+                  "axial": {
+                    "q": -2,
+                    "r": 2
+                  }
+                }
+              ]
+            }
+          ],
+          "capture": "both",
+          "jumpOver": true,
+          "requires": {
+            "darkOnly": true
+          },
+          "onCapture": {
+            "chain": true
+          }
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "rule.setTurns",
+      "params": {
+        "turns": {
+          "type": "samePlayerIfCapture",
+          "order": [
+            "white",
+            "black"
+          ],
+          "first": "white"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "type": "free"
+        }
+      }
+    },
+    {
+      "name": "rule.addOutcome",
+      "params": {
+        "outcome": {
+          "kind": "captureAll",
+          "player": "black"
+        }
+      },
+      "inverse": {
+        "prev": []
+      }
+    },
+    {
+      "name": "rule.addOutcome",
+      "params": {
+        "outcome": {
+          "kind": "captureAll",
+          "player": "white"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "kind": "captureAll",
+            "player": "black"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.addOutcome",
+      "params": {
+        "outcome": {
+          "kind": "noMoves",
+          "player": "opponent"
+        }
+      },
+      "inverse": {
+        "prev": [
+          {
+            "kind": "captureAll",
+            "player": "black"
+          },
+          {
+            "kind": "captureAll",
+            "player": "white"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rule.setEnd",
+      "params": {
+        "end": {
+          "condition": "anyOutcome",
+          "action": "stop"
+        }
+      },
+      "inverse": {
+        "prev": {
+          "condition": "manual",
+          "action": "stop"
+        }
+      }
+    }
+  ]
+}
