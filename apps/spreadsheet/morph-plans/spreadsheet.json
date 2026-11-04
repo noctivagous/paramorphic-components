@@ -621,6 +621,7 @@
   "interpretation": {
     "view": "spreadsheet",
     "grid": {
+      "editing": { "parse": "numberOrText", "expressions": "formula", "clear": "occupant" },
       "cell": {
         "kind": "editableText",
         "value": "data.value",

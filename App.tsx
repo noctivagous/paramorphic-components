@@ -3,7 +3,7 @@ import {
   DirectionCompass,
   GridViewport,
   TILINGS_LIST,
-  applyFormulas,
+  derivePresentedCells,
   applyPlan,
   commitCellText,
   errorIdsFor,
@@ -304,8 +304,6 @@ export default function App() {
   const [presetId, setPresetId] = useState("chess6");
   const [ruleSet, setRuleSet] = useState<RuleSet>(() => presetData("chess6").ruleSet);
   const [occupants, setOccupants] = useState<Occupant[]>(() => presetData("chess6").occupants);
-  const sheetDerived = useMemo(() => applyFormulas(occupants), [occupants]);
-  const sheetErrorIds = useMemo(() => errorIdsFor(sheetDerived.errors), [sheetDerived]);
   const [width, setWidth] = useState(6);
   const [height, setHeight] = useState(6);
   const [regions, setRegions] = useState<Region[]>(() => presetData("chess6").regions);
@@ -328,6 +326,8 @@ export default function App() {
   const [planErrors, setPlanErrors] = useState<string[]>([]);
   const [planFormat, setPlanFormat] = useState<string>("yaml");
   const [interpretation, setInterpretation] = useState<any>(null);
+  const sheetDerived = useMemo(() => derivePresentedCells(occupants, interpretation?.grid), [occupants, interpretation]);
+  const sheetErrorIds = useMemo(() => errorIdsFor(sheetDerived.errors), [sheetDerived]);
   const [configs, setConfigs] = useState<any[]>([]);
   const [saveName, setSaveName] = useState("");
 
@@ -618,11 +618,12 @@ export default function App() {
                 chrome={false}
                 presentation={(interpretation as any)?.grid?.cell}
                 headers={(interpretation as any)?.grid?.headers}
+                editing={(interpretation as any)?.grid?.editing}
                 derivedOccupants={sheetDerived.occupants}
                 derivedErrorIds={sheetErrorIds}
                 derivedErrors={sheetDerived.errors}
                 onCellCommit={(q, r, text) => {
-                  const next = commitCellText(occupants, q, r, text);
+                  const next = commitCellText(occupants, q, r, text, (interpretation as any)?.grid);
                   if (next) setOccupants(next);
                 }}
                 presentationHint="Type a number, text, or =formula. Formulas recompute through the derivation DAG on every edit."
@@ -655,6 +656,11 @@ export default function App() {
                 chrome={false}
                 presentation={(interpretation as any)?.grid?.cell}
                 headers={(interpretation as any)?.grid?.headers}
+                editing={(interpretation as any)?.grid?.editing}
+                onCellCommit={(q, r, text) => {
+                  const next = commitCellText(occupants, q, r, text, (interpretation as any)?.grid);
+                  if (next) setOccupants(next);
+                }}
                 presentationHint="Month grid rendered by the same cell presentations as the spreadsheet."
               />
             ) : component === "Grid" && (interpretation as any)?.view === "chat" ? (

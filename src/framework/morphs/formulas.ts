@@ -190,9 +190,9 @@ export function formulaDependencies(expr: string): string[] {
 
 // Spreadsheet convention: a cell's numeric value is occupant data.value;
 // missing or non-numeric reads as 0.
-export function occupantValueLookup(occupants: Occupant[]): NumberLookup {
+export function occupantValueLookup(occupants: Occupant[], valueField = "value"): NumberLookup {
   const m = new Map<string, unknown>();
-  for (const o of occupants) m.set(`${o.anchor.q},${o.anchor.r}`, (o.data as any)?.value);
+  for (const o of occupants) m.set(`${o.anchor.q},${o.anchor.r}`, (o.data as any)?.[valueField]);
   return (col, row) => {
     const v = m.get(`${col},${row}`);
     const n = typeof v === "number" ? v : Number(v);
@@ -207,9 +207,8 @@ export function occupantValueLookup(occupants: Occupant[]): NumberLookup {
 // sheet stays usable while one cell is broken.
 export type FormulaRecalc = { occupants: Occupant[]; errors: string[] };
 
-const isFormulaCell = (o: Occupant) => typeof (o.data as any)?.formula === "string";
-
-export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
+export function applyFormulas(occupants: Occupant[], fields: { value: string; formula: string; computed: string } = { value: "value", formula: "formula", computed: "computed" }): FormulaRecalc {
+  const isFormulaCell = (o: Occupant) => typeof (o.data as any)?.[fields.formula] === "string";
   const formulaCells = occupants.filter(isFormulaCell);
   const keyOf = (q: number, r: number) => `${q},${r}`;
   const idByKey = new Map(occupants.map(o => [keyOf(o.anchor.q, o.anchor.r), o.id]));
@@ -217,7 +216,7 @@ export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
   const dependsOn = (id: string): string[] => {
     const o = byId.get(id)!;
     const out: string[] = [];
-    for (const k of formulaDependencies((o.data as any).formula)) {
+    for (const k of formulaDependencies((o.data as any)[fields.formula])) {
       const dep = idByKey.get(k);
       if (dep && dep !== id && isFormulaCell(byId.get(dep)!)) out.push(dep);
     }
@@ -271,7 +270,7 @@ export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
     for (const id of cyclic) visit(id);
     return loop ?? cyclic;
   }
-  const base = occupantValueLookup(occupants);
+  const base = occupantValueLookup(occupants, fields.value);
   const computed = new Map<string, number>();
   const errored = new Set<string>(cyclic);
   const look: NumberLookup = (c, r) => {
@@ -287,7 +286,7 @@ export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
       continue;
     }
     try {
-      computed.set(id, evaluateFormula((byId.get(id)!.data as any).formula, look));
+      computed.set(id, evaluateFormula((byId.get(id)!.data as any)[fields.formula], look));
     } catch (e: any) {
       errors.push(`${id}: ${String(e?.message ?? e)}`);
       errored.add(id);
@@ -295,7 +294,7 @@ export function applyFormulas(occupants: Occupant[]): FormulaRecalc {
   }
   return {
     occupants: occupants.map(o =>
-      computed.has(o.id) ? { ...o, data: { ...(o.data as any), computed: computed.get(o.id) } } : o
+      computed.has(o.id) ? { ...o, data: { ...(o.data as any), [fields.computed]: computed.get(o.id) } } : o
     ),
     errors,
   };

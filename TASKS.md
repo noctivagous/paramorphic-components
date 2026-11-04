@@ -52,6 +52,18 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-04 — Reusable plan inventory
+
+Added a scoped recipe inventory and a spreadsheet recipe with dimensions, formula choice, and optional initial cells. Recipes generate ordinary validated, replayable plans; custom inventories can use another plan loader, and direct plan loading remains available. The spreadsheet shell can create a new sheet from the recipe. More recipes and app-kit composition remain future work.
+
+### 2026-11-04 — Composable cell editing
+
+Cell editing now combines parsing (`text` or `numberOrText`), expressions (`none` or `formula`), and clearing (`value` or `occupant`) independently. The spreadsheet plan selects the same behavior as before; legacy modes and plans without an explicit mode still load. Tests cover mixed policies, preservation of unrelated data, invalid configurations, and legacy compatibility. Date parsing remains future work.
+
+### 2026-11-04 — Bind cell editing and derivation to plans
+
+Grid interpretation now selects text or spreadsheet editing independently from presentation. Editable cells write the configured data fields, and spreadsheet formula evaluation reads and writes those same bindings. Text clearing preserves unrelated occupant data. Replay checks exercise custom fields through rendering, editing, undo/redo, saving, and loading; calendar event cards remain read-only.
+
 ### 2026-11-04 — Cell presentations: spreadsheet renders from its plan
 
 New concept `interpretation.grid` (`src/framework/presentations.ts`): a cell presentation (`editableText`, `readOnly`, `eventCard`) plus `data.<field>` bindings, column/row header specs (`letters`/`numbers`/`none`), a pure binding resolver (missing fields render empty, never throw), the shared `commitCellText` helper (value/formula/clear/no-op), and header/error utilities. `loadPlan` validates the block with actionable errors; unknown kinds and non-`data.*` paths reject. `GridViewport` renders a presentation table (headers, bound cells, formula display with `#ERR`, blur/Enter commit) when the props are set; game rendering is untouched otherwise. The spreadsheet plan configures `editableText` bound to `data.value`/`data.formula`/`data.computed` with letter/number headers, and both the spreadsheet app and the demo shell render it through the viewport — `SpreadsheetView.tsx` is deleted. A calendar proof plan (7×5, 4 events, same letters/numbers headers via `eventCard`) boots in the demo shell through the identical code path. `verify:replay` §32 pins config validation, bindings, commits, and both plans (204 total) with `typecheck` and all four builds green. Shared-vs-custom for the sheet: 144 lines of presentation machinery reused by both grids; per-app code is plan JSON plus shell wiring.

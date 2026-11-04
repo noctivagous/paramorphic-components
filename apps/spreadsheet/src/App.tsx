@@ -4,8 +4,8 @@
 // corrupt file can never become a broken board.
 import React, { useMemo, useRef, useState } from "react";
 import { GridViewport } from "../../../src/framework/components/GridViewport";
-import { applyFormulas, commitCellText, errorIdsFor, getTiling } from "../../../src/framework";
-import { loadPlan, parsePlan, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
+import { commitCellText, derivePresentedCells, editingPolicies, errorIdsFor, getTiling } from "../../../src/framework";
+import { loadPlan, parsePlan, planInventory, pushHistory, redoHistory, undoHistory } from "../../../src/framework";
 import type { AppliedMorph, HistoryStep, Occupant, PlanBase } from "../../../src/framework";
 import { PLANS } from "./plans";
 import { buildSheetSave, type SheetSettings } from "./save";
@@ -90,6 +90,9 @@ export default function App() {
   // interpretation.
   const [settings, setSettings] = useState<SheetSettings>(() => bootSettings);
   const [notice, setNotice] = useState<string | null>(null);
+  const [newWidth, setNewWidth] = useState(5);
+  const [newHeight, setNewHeight] = useState(4);
+  const [newFormulas, setNewFormulas] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const stateOf = (list: Occupant[]) => ({ occupants: list, width: size.w, height: size.h });
@@ -101,11 +104,13 @@ export default function App() {
   };
 
   const commit = (q: number, r: number, text: string) => {
-    const next = commitCellText(occupants, q, r, text);
+    const config = settings.interpretation?.grid;
+    if (!config) return;
+    const next = commitCellText(occupants, q, r, text, config);
     if (next) push(next);
   };
 
-  const { occupants: shown, errors: formulaErrors } = useMemo(() => applyFormulas(occupants), [occupants]);
+  const { occupants: shown, errors: formulaErrors } = useMemo(() => derivePresentedCells(occupants, settings.interpretation?.grid), [occupants, settings.interpretation]);
   const formulaErrorIds = useMemo(() => errorIdsFor(formulaErrors), [formulaErrors]);
   const presentation = settings.interpretation?.grid?.cell;
   const headers = settings.interpretation?.grid?.headers;
@@ -152,6 +157,17 @@ export default function App() {
 
   const reloadFile = () =>
     reset(bootPlan?.occupants ?? seed.occupants, (bootPlan?.width ?? seed.width) as number, (bootPlan?.height ?? seed.height) as number, bootBase, bootPlan?.morphs ?? [], bootSettings);
+
+  const newSheet = () => {
+    const result = planInventory.instantiate("spreadsheet", { width: newWidth, height: newHeight, formulas: newFormulas });
+    if (!result.ok) { setErrors(result.errors); return; }
+    const p = result.plan;
+    reset(p.occupants ?? [], p.width, p.height, p.base, p.morphs, {
+      tilingId: p.tilingId ?? "square8", presetId: p.presetId, ruleSet: p.ruleSet,
+      regions: p.regions ?? [], interpretation: p.interpretation,
+    });
+    setNotice("Created a new sheet from the spreadsheet recipe.");
+  };
 
   const save = () => {
     // Settings come from the opened file; the chain is verified before
@@ -219,6 +235,12 @@ export default function App() {
         SPREADSHEET — A PARAMORPHIC APP
       </div>
       <h1 className="text-[15px] font-bold">Sheet from a morph-plan</h1>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+        <label>Columns <input aria-label="New sheet columns" type="number" min={1} max={64} value={newWidth} onChange={e => setNewWidth(e.currentTarget.valueAsNumber)} className="w-14 bg-[var(--bg-3)] border border-[var(--border)] rounded px-1" /></label>
+        <label>Rows <input aria-label="New sheet rows" type="number" min={1} max={64} value={newHeight} onChange={e => setNewHeight(e.currentTarget.valueAsNumber)} className="w-14 bg-[var(--bg-3)] border border-[var(--border)] rounded px-1" /></label>
+        <label><input type="checkbox" checked={newFormulas} onChange={e => setNewFormulas(e.currentTarget.checked)} /> Formulas</label>
+        <button className={btn} onClick={newSheet}>NEW SHEET</button>
+      </div>
       <div className="mt-2 flex flex-wrap items-center gap-1">
         <span className="text-[10px] text-[var(--text-faint)]">File</span>
         <button className={btn} onClick={save}>
@@ -293,11 +315,12 @@ export default function App() {
             chrome={false}
             presentation={presentation}
             headers={headers}
+            editing={settings.interpretation?.grid?.editing}
             derivedOccupants={shown}
             derivedErrorIds={formulaErrorIds}
             derivedErrors={formulaErrors}
             onCellCommit={commit}
-            presentationHint="Type a number, text, or =formula. Formulas recompute through the derivation DAG on every edit."
+            presentationHint={editingPolicies(settings.interpretation?.grid).expressions === "formula" ? "Type a number, text, or =formula." : "Type a number or text."}
           />
         ) : (
           <div className="text-[11px] text-[#ff8a6b]">

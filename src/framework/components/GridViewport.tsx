@@ -4,7 +4,7 @@ import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
 import { buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occupantAtCell, pieceMatchesRule } from "../occupancy";
 import { makeId } from "../tilings";
 import { applySurroundCapture, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, ruleHasSurroundCapture } from "../engine";
-import { colName, resolveBinding, type CellPresentation, type GridHeaders } from "../presentations";
+import { colName, editingPolicies, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
 
@@ -62,6 +62,7 @@ export type GridViewportProps = {
   /** Plan-configured cell presentation (editable sheet, event cards, ...). */
   presentation?: CellPresentation;
   headers?: GridHeaders;
+  editing?: CellEditing;
   /** Derived display state (e.g. recomputed formulas); falls back to occupants. */
   derivedOccupants?: Occupant[];
   derivedErrorIds?: string[];
@@ -115,7 +116,7 @@ export function GridViewport({
   occupants, setOccupants, tiling, ruleSet, width, height, toggles, selectedId, setSelectedId, validMoves, setValidMoves,
   currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo,
   mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap,
-  presentation, headers, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint
+  presentation, headers, editing, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint
 }: GridViewportProps) {
   const cellSize = tiling.shape === "square" ? 44 : 40;
 
@@ -385,6 +386,7 @@ export function GridViewport({
   // plus bound cells instead of the game board. Game rendering below is
   // untouched when no presentation is configured.
   if (presentation) {
+    const expressions = editingPolicies({ cell: presentation, headers: headers ?? { columns: "none", rows: "none" }, editing }).expressions;
     const shown = derivedOccupants ?? occupants;
     const byKey = new Map<string, Occupant>();
     for (const o of shown) byKey.set(`${o.anchor.q},${o.anchor.r}`, o);
@@ -395,7 +397,7 @@ export function GridViewport({
       if (presentation.kind === "eventCard") {
         return { display: String(resolveBinding(o, presentation.value).value ?? ""), err: !!o && errIds.has(o.id) };
       }
-      const formula = presentation.formula
+      const formula = expressions === "formula" && presentation.formula
         ? (resolveBinding(o, presentation.formula).value as string | undefined)
         : undefined;
       if (formula) {

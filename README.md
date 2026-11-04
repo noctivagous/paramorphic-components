@@ -55,6 +55,14 @@ Here’s a working vocabulary for this project. Some terms describe capabilities
 
 The key distinction is: a component provides the structure; a vocabulary describes ways to change it; the registry and runtime carry out those changes; a plan records the intended construction.
 
+Grid plans configure cell presentations, `data.<field>` bindings, and editing policies separately in `interpretation.grid`. A plan can choose text or number-or-text parsing, enable formulas, and decide whether clearing removes the bound value or the whole occupant. The spreadsheet combines number-or-text parsing, formulas, and occupant clearing; its formulas use the configured value, formula, and computed fields. Existing `text` and `spreadsheet` editing modes and plans with formula bindings remain supported. Date parsing is not implemented. Calendar event cards remain read-only; calendar navigation and editing are not yet a complete app.
+
+For example, this editing configuration enables numeric cells without formulas and preserves an occupant's other data when its value is cleared:
+
+```json
+"editing": { "parse": "numberOrText", "expressions": "none", "clear": "value" }
+```
+
 > And then if you set up an app with our system, what does the directory filetree look like?
 
 Today, the spreadsheet app has its own directory and plan:
@@ -91,6 +99,25 @@ src/
 ```
 
 The player and keyboard also have their own directories and plans. The keyboard and spreadsheet use the shared `GridViewport` (geometry plus plan-configured cell presentations); the player keeps its own transport view. Each app's shell still supplies application-specific behavior, so its plan does not yet describe the entire app. The intended direction is to move recurring capabilities into shared components and stock morphs, leaving each app with a plan and a thin shell.
+
+### Reusable plan inventory
+
+The plan inventory is a catalog of parameterized starting recipes, separate from the registry of individual morphs. For example, the spreadsheet recipe accepts dimensions, whether formulas are enabled, and optional initial cells:
+
+```ts
+import { planInventory } from "./src/framework";
+
+const result = planInventory.instantiate("spreadsheet", {
+  width: 8, height: 6, formulas: true,
+  cells: [{ q: 0, r: 0, value: 12 }, { q: 1, r: 0, value: "=A1*2" }],
+});
+if (result.ok) {
+  // result.data is the ordinary serializable base + morphs plan.
+  // result.plan is its validated and replayed state.
+}
+```
+
+`planInventory.list()` describes available recipes and their parameters. The spreadsheet app can create a new blank sheet from the recipe. Generated plans are independent files: they can be edited, saved, and loaded without the inventory, and applications can still author plans directly. `createPlanInventory()` creates a separate catalog for custom recipes; pass a loader to support a different plan type. The inventory currently ships one spreadsheet recipe, not a complete app kit.
 
 
 > Where are we on this project?

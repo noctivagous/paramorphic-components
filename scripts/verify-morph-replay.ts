@@ -33,7 +33,9 @@ import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, 
 import { gridRegistry } from "../src/framework/morphs/registry";
 import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
-import { colName, commitCellText, errorIdsFor, resolveBinding } from "../src/framework/presentations";
+import { createPlanInventory } from "../src/framework/plan-inventory";
+import { planInventory } from "../src/framework/plan-kits";
+import { colName, commitCellText, derivePresentedCells, errorIdsFor, resolveBinding } from "../src/framework/presentations";
 import { GridViewport, mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
 import { getTiling } from "../src/framework/tilings";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
@@ -1091,6 +1093,131 @@ for (const f of files) {
   check("commit no-ops on identical text", commitCellText(put ?? [], 1, 1, "hello") === null);
   check("headers letter correctly", colName(0) === "A" && colName(25) === "Z" && colName(26) === "AA");
   check("error ids parse", errorIdsFor(["c-0-0: boom", "other"]).join(",") === "c-0-0,other");
+}
+
+// A differently bound editable sheet: render, edit, undo, save, and reload.
+{
+  const seed = JSON.parse(readFileSync(files[0].path, "utf8"));
+  const config = {
+    cell: { kind: "editableText" as const, value: "data.amount", formula: "data.expression", computed: "data.result" },
+    headers: { columns: "letters" as const, rows: "numbers" as const },
+    editing: { parse: "numberOrText" as const, expressions: "formula" as const, clear: "occupant" as const },
+  };
+  const data = { ...seed, occupants: [], base: { occupants: [], width: seed.width, height: seed.height }, morphs: [],
+    interpretation: { ...seed.interpretation, grid: config } };
+  const opened = loadPlan({ data, errors: [] }, null);
+  check("custom bindings plan loads", opened.ok, opened.ok ? "" : opened.errors.join("; "));
+  if (opened.ok) {
+    const s0 = opened.plan.base;
+    const occ1 = commitCellText(s0.occupants, 0, 0, "9", config)!;
+    const s1 = { ...s0, occupants: occ1 };
+    const occ2 = commitCellText(occ1, 1, 0, "=A1*2", config)!;
+    const s2 = { ...s0, occupants: occ2 };
+    const value = occ1.find(o => o.anchor.q === 0 && o.anchor.r === 0)!;
+    const formula = occ2.find(o => o.anchor.q === 1 && o.anchor.r === 0)!;
+    check("custom value and formula fields are written", value.data.amount === 9 && formula.data.expression === "=A1*2" && !('value' in value.data) && !('formula' in formula.data));
+    const derived = derivePresentedCells(occ2, config);
+    check("custom formula uses bound source and result", derived.occupants.find(o => o.id === formula.id)?.data.result === 18 && derived.errors.length === 0);
+    const renderConfig = { ...config.cell, kind: "readOnly" as const };
+    const noOp = () => {};
+    const renderProps: React.ComponentProps<typeof GridViewport> = {
+      occupants: occ2, derivedOccupants: derived.occupants, presentation: renderConfig, headers: config.headers,
+      setOccupants: noOp, tiling: getTiling("square8"), ruleSet: seed.ruleSet, width: seed.width, height: seed.height,
+      toggles: { gravity: false, diagonal: false, sliding: false, wrapping: false, chainCapture: false },
+      selectedId: null, setSelectedId: noOp, validMoves: [], setValidMoves: noOp, currentTurn: "", setCurrentTurn: noOp,
+      outcome: null, setOutcome: noOp, chainCaptureActive: false, setChainCaptureActive: noOp,
+      logicTriples: [], showRegions: false, setShowRegions: noOp, showSpan: false, knightDemo: false, setKnightDemo: noOp,
+    };
+    const markup = renderToStaticMarkup(React.createElement(GridViewport, renderProps));
+    check("custom binding result renders", markup.includes(">18</div>"));
+    const withoutExpressions = renderToStaticMarkup(React.createElement(GridViewport, {
+      ...renderProps, editing: { expressions: "none" }, occupants: [value, { ...formula, data: { ...formula.data, amount: "literal" } }], derivedOccupants: undefined,
+    }));
+    check("disabled expression display uses bound value", withoutExpressions.includes(">literal</div>") && !withoutExpressions.includes(">18</div>"));
+    const m1 = { name: "sheet.setCell", params: { occ: value }, inverse: { prev: null } };
+    const m2 = { name: "sheet.setCell", params: { occ: formula }, inverse: { prev: null } };
+    const past = pushHistory(pushHistory([], s0, m1), s1, m2);
+    const undone = undoHistory(past, [], s2);
+    const redone = redoHistory(undone.past, undone.future, undone.state);
+    check("custom binding edits undo and redo", undone.state.occupants.length === 1 && redone.state.occupants.length === 2);
+    const saved = buildSheetSave({ settings: { tilingId: seed.tilingId, presetId: seed.presetId, ruleSet: seed.ruleSet, regions: seed.regions, interpretation: data.interpretation },
+      size: { w: seed.width, h: seed.height }, occupants: redone.state.occupants, base: s0, adopted: [], past: redone.past });
+    check("custom binding edit saves as a chain", saved.ok && !saved.checkpointed);
+    if (saved.ok) {
+      const reloaded = loadPlan({ data: JSON.parse(JSON.stringify(saved.plan)), errors: [] }, null);
+      check("custom binding edit reloads", reloaded.ok);
+      if (reloaded.ok) {
+        const recalculated = derivePresentedCells(reloaded.plan.occupants ?? [], reloaded.plan.interpretation.grid);
+        check("custom binding result survives reload", recalculated.occupants.find(o => o.id === formula.id)?.data.result === 18);
+      }
+    }
+  }
+  const textConfig = { cell: { kind: "editableText" as const, value: "data.label" }, headers: { columns: "none" as const, rows: "none" as const }, editing: { kind: "text" as const } };
+  const event = { id: "event", anchor: { q: 0, r: 0 }, span: [], type: "event", data: { label: "Old", date: "2026-11-04" }, tags: [] };
+  const edited = commitCellText([event], 0, 0, "=Meeting", textConfig);
+  check("text editing writes bound field without formula parsing", edited?.[0].data.label === "=Meeting" && edited[0].data.date === event.data.date);
+  const cleared = commitCellText(edited ?? [], 0, 0, "", textConfig);
+  check("text clearing preserves occupant and unrelated data", cleared?.length === 1 && cleared[0].data.date === event.data.date && !("label" in cleared[0].data));
+  const invalid = { ...data, interpretation: { grid: { ...config, cell: { ...config.cell, value: "data.__proto__" } } } };
+  check("unsafe binding rejected", !loadPlan({ data: invalid, errors: [] }, null).ok);
+  const numericConfig = { ...textConfig, editing: { parse: "numberOrText" as const, expressions: "none" as const, clear: "value" as const } };
+  const numberEdit = commitCellText([event], 0, 0, "42", numericConfig);
+  const literalEdit = commitCellText([event], 0, 0, "=A1", numericConfig);
+  check("numeric parsing works without formulas", numberEdit?.[0].data.label === 42 && literalEdit?.[0].data.label === "=A1");
+  const composable = { ...config, editing: { parse: "text" as const, expressions: "formula" as const, clear: "value" as const } };
+  const formulaEvent = { ...event, data: { label: "meeting", date: "2026-11-04", expression: "=1+1", result: 2 } };
+  const mixed = commitCellText([formulaEvent], 0, 0, "42", composable);
+  check("formula handling composes with text parsing", mixed?.[0].data.amount === "42" && !("expression" in mixed[0].data) && mixed[0].data.date === event.data.date);
+  const clearedFormula = commitCellText([formulaEvent], 0, 0, "", composable);
+  check("clear value removes expression but preserves occupant", clearedFormula?.length === 1 && !("expression" in clearedFormula[0].data) && !("result" in clearedFormula[0].data) && clearedFormula[0].data.date === event.data.date);
+  const noExpressions = { ...config, editing: { expressions: "none" as const } };
+  check("disabled expressions skip derivation", derivePresentedCells([formulaEvent], noExpressions).occupants[0] === formulaEvent);
+  const badEditing = { ...data, interpretation: { grid: { ...config, editing: { expressions: "formula", clear: "value" }, cell: { kind: "editableText", value: "data.value" } } } };
+  check("formula policy requires bindings", !loadPlan({ data: badEditing, errors: [] }, null).ok);
+  const mixedLegacy = { ...data, interpretation: { grid: { ...config, editing: { kind: "spreadsheet", parse: "text" } } } };
+  check("ambiguous legacy and new policies rejected", !loadPlan({ data: mixedLegacy, errors: [] }, null).ok);
+  const noPolicy = { ...config, editing: undefined };
+  check("legacy formula bindings retain spreadsheet behavior", commitCellText([], 0, 0, "42", noPolicy)?.[0].data.amount === 42 && commitCellText([], 0, 0, "=1+1", noPolicy)?.[0].data.expression === "=1+1");
+}
+
+// Inventory recipes produce ordinary independent plans, and inventories are optional.
+{
+  const entry = planInventory.list().find(p => p.id === "spreadsheet");
+  check("spreadsheet recipe is discoverable with parameters", !!entry && entry.parameters.some(p => p.name === "width") && entry.parameters.some(p => p.name === "formulas"));
+  const made = planInventory.instantiate("spreadsheet", { width: 3, height: 2, cells: [{ q: 0, r: 0, value: 12 }, { q: 1, r: 0, value: "=A1*2" }] });
+  check("inventory builds a parameterized sheet", made.ok && made.plan.width === 3 && made.plan.height === 2 && made.plan.morphs.length === 2);
+  if (made.ok) {
+    const calc = derivePresentedCells(made.plan.occupants ?? [], made.plan.interpretation.grid);
+    check("inventory sheet evaluates seeded formulas", calc.occupants.find(o => o.anchor.q === 1)?.data.computed === 24);
+    const reload = loadPlan({ data: JSON.parse(JSON.stringify(made.data)), errors: [] }, null);
+    check("materialized inventory plan reloads without inventory", reload.ok && reload.plan.morphs.length === 2);
+    const before = { occupants: made.plan.occupants ?? [], width: made.plan.width, height: made.plan.height };
+    const changed = commitCellText(before.occupants, 2, 1, "15", made.plan.interpretation.grid)!;
+    const added = changed.find(o => o.anchor.q === 2 && o.anchor.r === 1)!;
+    const past = pushHistory([], before, { name: "sheet.setCell", params: { occ: added }, inverse: { prev: null } });
+    const saved = buildSheetSave({ settings: { tilingId: made.plan.tilingId!, presetId: made.plan.presetId, ruleSet: made.plan.ruleSet, regions: made.plan.regions ?? [], interpretation: made.plan.interpretation }, size: { w: before.width, h: before.height }, occupants: changed, base: made.plan.base, adopted: made.plan.morphs, past });
+    check("recipe sheet edits save as a complete plan", saved.ok && !saved.checkpointed);
+    if (saved.ok) {
+      const reopened = loadPlan({ data: JSON.parse(JSON.stringify(saved.plan)), errors: [] }, null);
+      check("saved recipe sheet reopens with edits", reopened.ok && reopened.plan.occupants?.some(o => o.id === added.id && o.data.value === 15));
+    }
+  }
+  const plain = planInventory.instantiate("spreadsheet", { width: 2, height: 2, formulas: false, cells: [{ q: 0, r: 0, value: "=literal" }] });
+  check("formula-disabled recipe keeps literal text", plain.ok && plain.plan.occupants?.[0].data.value === "=literal" && plain.plan.interpretation.grid.editing.expressions === "none");
+  check("inventory rejects invalid dimensions", !planInventory.instantiate("spreadsheet", { width: 0 }).ok);
+  check("inventory rejects duplicate cells", !planInventory.instantiate("spreadsheet", { cells: [{ q: 0, r: 0, value: 1 }, { q: 0, r: 0, value: 2 }] }).ok);
+  check("inventory rejects unknown recipes", !planInventory.instantiate("missing", {}).ok);
+  const own = createPlanInventory();
+  own.register({ id: "custom", label: "Custom", description: "A custom starting plan", parameters: [], validate: () => [], build: () => JSON.parse(readFileSync(files[0].path, "utf8")) });
+  check("custom inventory is independent", own.instantiate("custom", {}).ok && !own.instantiate("spreadsheet", {}).ok);
+  const trees = createPlanInventory(data => {
+    const result = loadTreePlan(data as Parameters<typeof loadTreePlan>[0]);
+    return result.ok ? { ok: true, plan: result.state } : result;
+  });
+  trees.register({ id: "tree", label: "Tree", description: "A non-Grid plan", parameters: [], validate: () => [], build: () => ({ base: { nodes: [] }, morphs: [] }) });
+  const tree = trees.instantiate("tree", {});
+  check("custom inventory supports a non-Grid plan loader", tree.ok && tree.plan.nodes.length === 0);
+  check("custom plans still load without a recipe", loadPlan({ data: JSON.parse(readFileSync(files[0].path, "utf8")), errors: [] }, null).ok);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

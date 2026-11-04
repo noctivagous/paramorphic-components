@@ -18,6 +18,8 @@ export * from "./morphs/registry";
 export * from "./morphs/scoped";
 export * from "./history";
 export * from "./save";
+export * from "./plan-inventory";
+export * from "./plan-kits";
 export * from "./presentations";
 import "./morphs/sheet";
 import "./morphs/grid";
