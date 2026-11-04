@@ -23,13 +23,10 @@ export function slotsForRow(occupants: Occupant[], width: number, r: number): Ke
   });
 }
 
-/** Fallback stagger when the plan carries no keyboard offsets. */
-export const DEFAULT_STAGGER = [0, 10, 20, 30, 48];
-
 /** Row offset in px, read from the plan (`interpretation.keyboard.stagger`). */
 export function staggerForRow(r: number, stagger: number[] | undefined): number {
-  const list = Array.isArray(stagger) && stagger.length > 0 ? stagger : DEFAULT_STAGGER;
-  return list[Math.min(r, list.length - 1)] ?? 0;
+  if (!Array.isArray(stagger) || stagger.length === 0) return 0;
+  return stagger[Math.min(r, stagger.length - 1)] ?? 0;
 }
 
 /** Merged box for a multi-cell occupant at a square cell size. Null when single-cell. */

@@ -52,6 +52,10 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### 2026-11-04 — Grid rendering and save regression fixes
+
+Grid rows now stay aligned unless a stagger is supplied; keyboard offsets still come from its plan. Grid save validates the current board before publishing either a full chain or a checkpoint. Regression checks render the viewport with and without stagger and reject a matching invalid base and snapshot.
+
 ### 2026-11-04 — Keyboard geometry on the shared renderer
 
 `GridViewport` now handles the irregular geometry itself: `mergeSpans` merges multi-cell occupants into one box (covered cells skip; box math in the pure `mergedBox` helper), `stagger` offsets rows from the plan (`staggerForRow`, fallback `DEFAULT_STAGGER`), `chrome={false}` hides the game toolbar/footer, and `onOccupantTap`/`onEmptyTap` bypass game logic for presses and layout edits. The keyboard shell renders through it with neutered rules; the custom `KeyboardView.tsx` is deleted. Shared-vs-custom for the keyboard is now the 78-line `key.*` vocabulary plus shell wiring over the untouched core, viewport, and placement checks; game shells are unaffected (all new props optional/defaulted). `verify:replay` §31 pins the wiring and the merged-box math (183 total) with `typecheck` and all four builds green.

@@ -500,17 +500,17 @@ export function chainForSave(
   // replayed state matches the current board. Otherwise checkpoint honestly —
   // but only a loadable checkpoint: an invalid current board is an error,
   // never a file its own loader rejects.
-  const chainValid = Array.isArray(chain) && validateChain(chain, ctx).length === 0;
-  const replayed = chainValid ? replayMorphsChecked(base, chain, ctx) : replayMorphs(base, chain, ctx);
-  const matches = replayed.ok && statesEqual(replayed.state, occupants, width, height) === null;
-  if (gridRegistry.publishesFullChain(true, chainValid, replayed.ok, matches)) {
-    return { ok: true, base, morphs: chain, checkpointed: false };
-  }
   const boardErrors = Array.isArray(occupants)
     ? checkBoard(occupants, width, height)
     : ["current occupants must be an array"];
   if (boardErrors.length > 0) {
     return { ok: false, errors: boardErrors.map(e => `current state: ${e}`) };
+  }
+  const chainValid = Array.isArray(chain) && validateChain(chain, ctx).length === 0;
+  const replayed = chainValid ? replayMorphsChecked(base, chain, ctx) : replayMorphs(base, chain, ctx);
+  const matches = replayed.ok && statesEqual(replayed.state, occupants, width, height) === null;
+  if (gridRegistry.publishesFullChain(true, chainValid, replayed.ok, matches)) {
+    return { ok: true, base, morphs: chain, checkpointed: false };
   }
   return { ok: true, base: { occupants, width, height }, morphs: [], checkpointed: true };
 }

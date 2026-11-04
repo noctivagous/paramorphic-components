@@ -2,6 +2,8 @@
 // base + morph chain, never by trusting the cached snapshot. Run with
 // `npm run verify:replay` (esbuild bundle + node, no test framework).
 import { readFileSync } from "node:fs";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { chainForSave, loadPlan } from "../src/framework/plan";
 import {
   applyMorph,
@@ -31,7 +33,8 @@ import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, 
 import { gridRegistry } from "../src/framework/morphs/registry";
 import { createHistory } from "../src/framework/history";
 import { buildAppSave } from "../src/framework/save";
-import { mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
+import { GridViewport, mergedBox, slotsForRow, staggerForRow } from "../src/framework/components/GridViewport";
+import { getTiling } from "../src/framework/tilings";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
 
 let pass = 0;
@@ -970,8 +973,20 @@ for (const f of files) {
     row4[2]?.key === null && !row4[2]?.covered, JSON.stringify(row4[2]));
   check("Space covers slots 3..11",
     row4[3]?.key?.id === "key-space" && row4[4]?.covered && row4[11]?.covered && !row4[12]?.covered);
-  check("stagger reads plan offsets with fallback",
-    staggerForRow(3, [0, 10, 20, 30, 48]) === 30 && staggerForRow(9, [0, 10]) === 10 && staggerForRow(0, []) === 0);
+  check("stagger reads plan offsets and defaults to zero",
+    staggerForRow(3, [0, 10, 20, 30, 48]) === 30 && staggerForRow(9, [0, 10]) === 10 && staggerForRow(3, []) === 0 && staggerForRow(3, undefined) === 0);
+  const noOp = () => {};
+  const viewportProps: React.ComponentProps<typeof GridViewport> = {
+    occupants: [], setOccupants: noOp, tiling: getTiling("square8"), ruleSet: kdata.ruleSet,
+    width: 2, height: 2, toggles: { gravity: false, diagonal: false, sliding: false, wrapping: false, chainCapture: false },
+    selectedId: null, setSelectedId: noOp, validMoves: [], setValidMoves: noOp, currentTurn: "white", setCurrentTurn: noOp,
+    outcome: null, setOutcome: noOp, chainCaptureActive: false, setChainCaptureActive: noOp,
+    logicTriples: [], showRegions: false, setShowRegions: noOp, showSpan: false, knightDemo: false, setKnightDemo: noOp,
+  };
+  const plainGrid = renderToStaticMarkup(React.createElement(GridViewport, viewportProps));
+  const staggeredGrid = renderToStaticMarkup(React.createElement(GridViewport, { ...viewportProps, stagger: [0, 10] }));
+  check("rendered square grid aligns rows without stagger", plainGrid.includes("left:0;top:44px"));
+  check("rendered square grid applies explicit stagger", staggeredGrid.includes("left:10px;top:44px"));
   // (b) Tree save with an invalid base checkpoints a valid current state.
   const troot = { id: "troot", kind: "folder", parent: null, label: "troot" };
   let treeThrew = false;
@@ -991,6 +1006,10 @@ for (const f of files) {
   const gridRes = (chainForSave as any)({ occupants: [], width: 5, height: 4 }, [], [badOcc], 5, 4);
   check("invalid grid checkpoint rejected",
     gridRes?.ok === false && (gridRes?.errors?.length ?? 0) > 0, JSON.stringify(gridRes));
+  const duplicate = [koccs[0], koccs[0]];
+  const matchingBase = { occupants: duplicate, width: 15, height: 5 };
+  const matchingInvalid = chainForSave(matchingBase, [], duplicate, 15, 5);
+  check("matching invalid grid state rejected", !matchingInvalid.ok && matchingInvalid.errors.some(e => e.includes("collision")));
   const badLoad = loadPlan({
     data: { component: "Grid", tilingId: "square8", presetId: "x", width: 5, height: 4,
       ruleSet: JSON.parse(readFileSync(files[0].path, "utf8")).ruleSet,
