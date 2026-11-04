@@ -70,6 +70,7 @@ For example, this editing configuration enables numeric cells without formulas a
 
 Today, the spreadsheet app has its own directory and plan:
 
+
 ```text
 apps/spreadsheet/
 ├── index.html
@@ -155,6 +156,33 @@ For example, the shared Grid could provide layout, sizing, selection, keyboard n
 The important step is to implement these as reusable capabilities—not add a separate calendar mode or timeline mode for every app. App-specific behavior can remain a small named extension when the shared library cannot express it.
 
 I’d start with calendar and timeline together: build both on the shared Grid, extract the layout and interaction features they actually share, and measure the remaining custom code. Their differences will show us which abstractions are useful without guessing the entire system upfront.
+
+
+
+> When there is a gap the AI should extend the framework but it is more that the framework should be revised to cover the majority of common cases
+
+Yes. The AI should treat a missing capability as an opportunity to improve the shared system, not immediately work around it in one app.
+
+For example, spreadsheet selection shouldn’t become spreadsheet-only code. Grid should offer selection as a configurable capability that a calendar, board, or timeline can also use. Each new app then helps expand what the framework can express.
+
+The aim is broad reuse without forcing unrelated needs into one feature. Some things—like chess rules or spreadsheet formulas—can live in reusable vocabularies or kits rather than the core Grid. App-specific code remains available when a requirement truly is specific.
+
+Over time, that makes each app both a product and a test of the system’s coverage.
+
+> The key issue is that the revisions shouldn't practical but abstract.  When there is no cell format validator, it isn't that grid cells need validators but that a generic validator should be able to be attached to grid or cells.
+
+Yes. The missing concept is attachable validation, not a special “Grid cell validator.”
+
+A generic validation system could define a validator separately, then attach it to a target and a value:
+
+- A Grid cell’s contents must be a number.
+- A form field must contain a valid email address.
+- A Tree node’s name must be unique among its siblings.
+- A Path point must stay within a region.
+
+The component exposes the value and context; the validator evaluates them; the plan specifies where it applies and what happens on failure. Some validations need context beyond one value, such as sibling names or neighboring cells.
+
+That suggests a design rule for the project: when an app exposes a missing capability, identify the most general useful concept first, then make components support attaching it. The app becomes a test case for the abstraction.
 
 
 
