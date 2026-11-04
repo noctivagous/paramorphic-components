@@ -83,7 +83,27 @@ src/
 The intended direction is for each app to have its own plan and a thin shell, while sharing components and stock morphs. Today the shell and view still contain application-specific code, so the plan does not yet describe the entire app.
 
 
+> Where are we on this project?
 
+We have a working prototype of the foundation, with three standalone apps: spreadsheet, sequencer, and keyboard.
+
+They share Grid state, morph registration, replay, and undo machinery. The keyboard now uses the shared Grid renderer for wide keys and staggered rows. A separate Tree state also exercises the generic morph core.
+
+The larger vision is still ahead: plans configure parts of these apps, but custom code still supplies much of their behavior. Tree and the other component families aren’t yet demonstrated in complete apps, and we haven’t measured whether AI can reliably assemble varied interfaces faster from plans.
+
+> How do we make it so that apps like checkers, chess, calendars, timeine editors etc. have less custom code ?
+
+We reduce custom code by moving recurring capabilities into configurable shared components, then describing each app’s choices in its plan.
+
+For example, the shared Grid could provide layout, sizing, selection, keyboard navigation, dragging, resizing, and hosting. Plans would specify how to use those capabilities:
+
+- Checkers and chess: piece arrangements, movement rules, turns, and outcomes.
+- Calendar: date-to-cell mapping, event occupants, navigation, and views.
+- Timeline: time and track axes, clip spans, dragging, resizing, and snapping.
+
+The important step is to implement these as reusable capabilities—not add a separate calendar mode or timeline mode for every app. App-specific behavior can remain a small named extension when the shared library cannot express it.
+
+I’d start with calendar and timeline together: build both on the shared Grid, extract the layout and interaction features they actually share, and measure the remaining custom code. Their differences will show us which abstractions are useful without guessing the entire system upfront.
 
 
 
