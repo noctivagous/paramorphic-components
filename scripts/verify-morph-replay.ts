@@ -25,8 +25,12 @@ import "../src/framework/morphs/grid";
 import "../src/framework/morphs/player";
 import "../src/framework/morphs/cursor";
 import "../src/framework/morphs/tree";
+import "../src/framework/morphs/keys";
 import { createMorphRegistry } from "../src/framework/morphs/scoped";
-import { chainForTreeSave, loadTreePlan, treeRegistry } from "../src/framework/morphs/tree2";
+import { chainForTreeSave, loadTreePlan, removeTreeMorphAt, replaceTreeMorphAt, treeRegistry } from "../src/framework/morphs/tree2";
+import { gridRegistry } from "../src/framework/morphs/registry";
+import { createHistory } from "../src/framework/history";
+import { buildAppSave } from "../src/framework/save";
 import { cloneTreeState, type TreeState } from "../src/framework/tree-state";
 
 let pass = 0;
@@ -853,6 +857,96 @@ for (const f of files) {
       nodes: [goodRoot, goodKid],
     } as any);
     check("saved clean chain reloads", cleanReload.ok, cleanReload.ok ? "" : cleanReload.errors.join("; "));
+  }
+}
+
+// 28. Unified core: Grid registry/history/save run on the shared machinery.
+{
+  // The Grid registry is the PlanState instance of the scoped factory.
+  check("grid scope lists key vocabulary", gridRegistry.list().some(d => d.name === "key.define"));
+  check("grid scope isolates unknown morphs",
+    gridRegistry.checkMorphState("tree.addNode", { occupants: [], width: 1, height: 1 }, {}).length === 1);
+  // Disjoint Tree surgery runs through the same scoped core.
+  const root = { id: "root", kind: "folder", parent: null, label: "root" } as const;
+  const kid = { id: "kid", kind: "file", parent: "root", label: "kid" } as const;
+  const add = (node: any) => ({ name: "tree.addNode", params: { node } });
+  const tbase = { nodes: [] };
+  const removed = removeTreeMorphAt(tbase as any, [add(root), add(kid)] as any, 0);
+  check("disjoint remove reports dependents", !removed.ok);
+  const replaced = replaceTreeMorphAt(tbase as any, [add(root)] as any, 0,
+    { name: "tree.addNode", params: { node: kid } } as any);
+  check("disjoint replace reports dependents", !replaced.ok);
+  const okRemove = removeTreeMorphAt(tbase as any, [add(root), add(kid)] as any, 1);
+  check("disjoint remove of leaf replays", okRemove.ok && (okRemove as any).chain.length === 1);
+  // Generic history factory drives undo/redo for a non-PlanState scope.
+  const num = createHistory<{ v: number }, { name: string; params: {}; inverse?: unknown }>({
+    apply: (s, m) => (m.name === "inc" ? { ok: true as const, state: { v: s.v + 1 } } : { ok: false as const, errors: ["nope"] }),
+    invert: (s, m) => (m.name === "inc" ? { v: s.v - 1 } : null),
+  });
+  const h1 = num.push([], { v: 0 }, { name: "inc", params: {} });
+  const u1 = num.undo(h1, [], { v: 1 });
+  check("generic history undoes via invert", u1.undone && u1.state.v === 0);
+  const r1 = num.redo(u1.past, u1.future, u1.state);
+  check("generic history redoes via apply", r1.redone && r1.state.v === 1);
+  // Shared save helper publishes whole for spreadsheet and player alike.
+  const sdata = JSON.parse(readFileSync(files[0].path, "utf8"));
+  const sfirst = loadPlan({ data: sdata, errors: [] }, null);
+  if (!sfirst.ok) {
+    check("shared save setup loads", false, sfirst.errors.join("; "));
+  } else {
+    const saved = buildAppSave({
+      settings: { tilingId: sdata.tilingId, presetId: "x", ruleSet: sdata.ruleSet, regions: [], interpretation: null },
+      size: { w: sfirst.plan.width, h: sfirst.plan.height },
+      occupants: sfirst.plan.occupants ?? [],
+      base: sfirst.plan.base,
+      adopted: sfirst.plan.morphs,
+      past: [],
+    });
+    check("shared save publishes whole chain", !saved.checkpointed && saved.plan.morphs.length === 11);
+  }
+}
+
+// 29. Keyboard: plan loads, wide keys replay, edits round-trip.
+{
+  const kdata = JSON.parse(readFileSync("apps/keyboard/morph-plans/keyboard.json", "utf8"));
+  const kfirst = loadPlan({ data: kdata, errors: [] }, null);
+  check("keyboard plan loads", kfirst.ok, kfirst.ok ? "" : kfirst.errors.join("; "));
+  if (kfirst.ok) {
+    const occs = kfirst.plan.occupants ?? [];
+    check("keyboard yields 47 keys", occs.length === 47, `got ${occs.length}`);
+    const wide = occs.filter(o => (o.span ?? []).length > 0);
+    check("keyboard has wide keys", wide.length >= 6, `got ${wide.length}`);
+    const space = occs.find(o => o.id === "key-space");
+    check("space spans 9 cells",
+      !!space && space.anchor.q === 3 && space.anchor.r === 4 && space.span.length === 8,
+      space ? JSON.stringify(space.anchor) + "+" + space.span.length : "missing");
+    // Overlapping a wide key is rejected by the shared placement check.
+    const clash = { id: "key-clash", anchor: { q: 4, r: 4 }, span: [], type: "key", data: { label: "X" }, tags: [] };
+    const bad = loadPlan({
+      data: { ...kdata, morphs: [...kfirst.plan.morphs, { name: "key.define", params: { occ: clash }, inverse: { prev: null } }], occupants: [...occs, clash] },
+      errors: [],
+    }, null);
+    check("wide-key collision rejected", !bad.ok, bad.ok ? "overlapped space" : "");
+    // Wrong-vocabulary morphs do not validate as keys.
+    const mistyped = { id: "key-bad", anchor: { q: 14, r: 0 }, span: [], type: "note", data: { label: "B" }, tags: [] };
+    check("non-key occupant rejected by key vocabulary",
+      gridRegistry.checkMorphState("key.define", { occupants: [], width: 15, height: 5 }, { occ: mistyped }).length > 0);
+    // A layout edit round-trips through save.
+    const extra = { id: "key-f13", anchor: { q: 14, r: 0 }, span: [], type: "key", data: { label: "F13" }, tags: [] };
+    const saved = buildAppSave({
+      settings: { tilingId: kdata.tilingId, presetId: kdata.presetId, ruleSet: kdata.ruleSet, regions: [], interpretation: kdata.interpretation },
+      size: { w: 15, h: 5 },
+      occupants: [...occs, extra],
+      base: kfirst.plan.base,
+      adopted: kfirst.plan.morphs,
+      past: [{ snapshot: { occupants: occs, width: 15, height: 5 }, morph: { name: "key.define", params: { occ: extra }, inverse: { prev: null } } }],
+    });
+    check("keyboard edit saves whole", !saved.checkpointed, saved.checkpointed ? "checkpointed" : "");
+    const reload = loadPlan({ data: { ...kdata, base: saved.plan.base, morphs: saved.plan.morphs, occupants: saved.plan.occupants }, errors: [] }, null);
+    check("keyboard save reloads", reload.ok, reload.ok ? "" : reload.errors.join("; "));
+    if (reload.ok) {
+      check("keyboard keeps edit", (reload.plan.occupants ?? []).some(o => o.id === "key-f13"));
+    }
   }
 }
 

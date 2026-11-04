@@ -1,6 +1,6 @@
 import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } from "./types";
 import { TILINGS, getTiling } from "./tilings";
-import { recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
+import { gridRegistry, recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
 import { cellsOf } from "./editing";
 
 // ---------- Plan parsing & validation ----------
@@ -494,8 +494,14 @@ export function chainForSave(
   height: number,
   ctx: MorphContext = {}
 ): { base: PlanBase; morphs: AppliedMorph[]; checkpointed: boolean } {
-  const replayed = replayMorphs(base, chain, ctx);
-  if (replayed.ok && statesEqual(replayed.state, occupants, width, height) === null) {
+  // Save-publication rule shared with disjoint Tree chains (see
+  // `publishesFullChain` on the scoped core): publish the full base + chain
+  // only when the chain validates, the checked replay accepts it, and the
+  // replayed state matches the current board. Otherwise checkpoint honestly.
+  const chainValid = Array.isArray(chain) && validateChain(chain, ctx).length === 0;
+  const replayed = chainValid ? replayMorphsChecked(base, chain, ctx) : replayMorphs(base, chain, ctx);
+  const matches = replayed.ok && statesEqual(replayed.state, occupants, width, height) === null;
+  if (gridRegistry.publishesFullChain(true, chainValid, replayed.ok, matches)) {
     return { base, morphs: chain, checkpointed: false };
   }
   return { base: { occupants, width, height }, morphs: [], checkpointed: true };

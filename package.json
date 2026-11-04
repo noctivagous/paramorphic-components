@@ -14,7 +14,10 @@
     "preview:spreadsheet": "vite preview --config apps/spreadsheet/vite.config.ts",
     "dev:player": "vite --config apps/player/vite.config.ts",
     "build:player": "vite build --config apps/player/vite.config.ts",
-    "preview:player": "vite preview --config apps/player/vite.config.ts"
+    "preview:player": "vite preview --config apps/player/vite.config.ts",
+    "dev:keyboard": "vite --config apps/keyboard/vite.config.ts",
+    "build:keyboard": "vite build --config apps/keyboard/vite.config.ts",
+    "preview:keyboard": "vite preview --config apps/keyboard/vite.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

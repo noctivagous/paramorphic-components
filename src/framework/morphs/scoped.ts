@@ -139,6 +139,67 @@ export function createMorphRegistry<S>() {
     }
   }
 
+  function removeAt(
+    base: S,
+    chain: ScopedAppliedMorph[],
+    index: number,
+    ctx: unknown = {},
+    clone: (s: S) => S
+  ): { ok: true; state: S; chain: ScopedAppliedMorph[] } | { ok: false; errors: string[] } {
+    if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
+      return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
+    }
+    const next = recaptureFrames(base, chain.filter((_, i) => i !== index), clone);
+    const replayed = replayMorphsChecked(base, next, ctx, clone);
+    if (!replayed.ok) {
+      const removed = chain[index];
+      return {
+        ok: false,
+        errors: [`removing morphs[${index}] (${removed.name}) breaks dependents:`, ...replayed.errors],
+      };
+    }
+    return { ok: true, state: replayed.state, chain: next };
+  }
+
+  function replaceAt(
+    base: S,
+    chain: ScopedAppliedMorph[],
+    index: number,
+    replacement: ScopedAppliedMorph,
+    ctx: unknown = {},
+    clone: (s: S) => S
+  ): { ok: true; state: S; chain: ScopedAppliedMorph[] } | { ok: false; errors: string[] } {
+    if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
+      return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
+    }
+    if (!replacement || typeof replacement.name !== "string") {
+      return { ok: false, errors: ["replacement morph needs a name"] };
+    }
+    if (!defs.has(replacement.name)) {
+      return { ok: false, errors: [`unknown morph "${replacement.name}"`] };
+    }
+    const next = recaptureFrames(base, chain.map((m, i) => (i === index ? replacement : m)), clone);
+    const replayed = replayMorphsChecked(base, next, ctx, clone);
+    if (!replayed.ok) {
+      return {
+        ok: false,
+        errors: [`replacing morphs[${index}] with ${replacement.name} breaks dependents:`, ...replayed.errors],
+      };
+    }
+    return { ok: true, state: replayed.state, chain: next };
+  }
+
+  /**
+   * Shared save-publication rule used by every scope (Grid plan chains and
+   * disjoint Tree chains alike): publish the full base + chain only when the
+   * scope's own checked replay accepts it and the replayed state matches the
+   * current state; otherwise the caller checkpoints. Pure predicate so each
+   * scope keeps its own base/chain/current types.
+   */
+  function publishesFullChain(validBase: boolean, chainValid: boolean, replayOk: boolean, matches: boolean): boolean {
+    return validBase && chainValid && replayOk && matches;
+  }
+
   function recaptureFrames(base: S, chain: ScopedAppliedMorph[], clone: (s: S) => S): ScopedAppliedMorph[] {
     let state = clone(base);
     return chain.map(m => {
@@ -176,6 +237,9 @@ export function createMorphRegistry<S>() {
     replayMorphsChecked,
     invertMorph,
     recaptureFrames,
+    removeAt,
+    replaceAt,
+    publishesFullChain,
   };
 }
 

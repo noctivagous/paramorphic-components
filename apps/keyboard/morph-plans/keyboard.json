@@ -1,0 +1,1932 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "keyboard",
+  "width": 15,
+  "height": 5,
+  "ruleSet": {
+    "id": "keyboard",
+    "setup": {
+      "width": 15,
+      "height": 5,
+      "description": "QWERTY keyboard: wide keys via span, stagger is view-only"
+    },
+    "moves": [
+      {
+        "pieceType": "key",
+        "moves": [
+          {
+            "type": "place",
+            "anywhere": true
+          }
+        ],
+        "capture": "move"
+      }
+    ],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "typist"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "none",
+      "action": "none"
+    },
+    "regions": []
+  },
+  "occupants": [
+    {
+      "id": "key-1",
+      "anchor": {
+        "q": 0,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "1",
+        "pitch": 0
+      },
+      "tags": []
+    },
+    {
+      "id": "key-2",
+      "anchor": {
+        "q": 1,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "2",
+        "pitch": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "key-3",
+      "anchor": {
+        "q": 2,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "3",
+        "pitch": 2
+      },
+      "tags": []
+    },
+    {
+      "id": "key-4",
+      "anchor": {
+        "q": 3,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "4",
+        "pitch": 3
+      },
+      "tags": []
+    },
+    {
+      "id": "key-5",
+      "anchor": {
+        "q": 4,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "5",
+        "pitch": 4
+      },
+      "tags": []
+    },
+    {
+      "id": "key-6",
+      "anchor": {
+        "q": 5,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "6",
+        "pitch": 5
+      },
+      "tags": []
+    },
+    {
+      "id": "key-7",
+      "anchor": {
+        "q": 6,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "7",
+        "pitch": 6
+      },
+      "tags": []
+    },
+    {
+      "id": "key-8",
+      "anchor": {
+        "q": 7,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "8",
+        "pitch": 7
+      },
+      "tags": []
+    },
+    {
+      "id": "key-9",
+      "anchor": {
+        "q": 8,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "9",
+        "pitch": 8
+      },
+      "tags": []
+    },
+    {
+      "id": "key-0",
+      "anchor": {
+        "q": 9,
+        "r": 0
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "0",
+        "pitch": 9
+      },
+      "tags": []
+    },
+    {
+      "id": "key-backspace",
+      "anchor": {
+        "q": 10,
+        "r": 0
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Bksp",
+        "pitch": 10
+      },
+      "tags": []
+    },
+    {
+      "id": "key-tab",
+      "anchor": {
+        "q": 0,
+        "r": 1
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Tab",
+        "pitch": 2
+      },
+      "tags": []
+    },
+    {
+      "id": "key-Q",
+      "anchor": {
+        "q": 2,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Q",
+        "pitch": 4
+      },
+      "tags": []
+    },
+    {
+      "id": "key-W",
+      "anchor": {
+        "q": 3,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "W",
+        "pitch": 5
+      },
+      "tags": []
+    },
+    {
+      "id": "key-E",
+      "anchor": {
+        "q": 4,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "E",
+        "pitch": 6
+      },
+      "tags": []
+    },
+    {
+      "id": "key-R",
+      "anchor": {
+        "q": 5,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "R",
+        "pitch": 7
+      },
+      "tags": []
+    },
+    {
+      "id": "key-T",
+      "anchor": {
+        "q": 6,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "T",
+        "pitch": 8
+      },
+      "tags": []
+    },
+    {
+      "id": "key-Y",
+      "anchor": {
+        "q": 7,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Y",
+        "pitch": 9
+      },
+      "tags": []
+    },
+    {
+      "id": "key-U",
+      "anchor": {
+        "q": 8,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "U",
+        "pitch": 10
+      },
+      "tags": []
+    },
+    {
+      "id": "key-I",
+      "anchor": {
+        "q": 9,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "I",
+        "pitch": 11
+      },
+      "tags": []
+    },
+    {
+      "id": "key-O",
+      "anchor": {
+        "q": 10,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "O",
+        "pitch": 0
+      },
+      "tags": []
+    },
+    {
+      "id": "key-P",
+      "anchor": {
+        "q": 11,
+        "r": 1
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "P",
+        "pitch": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "key-caps",
+      "anchor": {
+        "q": 0,
+        "r": 2
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Caps",
+        "pitch": 4
+      },
+      "tags": []
+    },
+    {
+      "id": "key-A",
+      "anchor": {
+        "q": 2,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "A",
+        "pitch": 6
+      },
+      "tags": []
+    },
+    {
+      "id": "key-S",
+      "anchor": {
+        "q": 3,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "S",
+        "pitch": 7
+      },
+      "tags": []
+    },
+    {
+      "id": "key-D",
+      "anchor": {
+        "q": 4,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "D",
+        "pitch": 8
+      },
+      "tags": []
+    },
+    {
+      "id": "key-F",
+      "anchor": {
+        "q": 5,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "F",
+        "pitch": 9
+      },
+      "tags": []
+    },
+    {
+      "id": "key-G",
+      "anchor": {
+        "q": 6,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "G",
+        "pitch": 10
+      },
+      "tags": []
+    },
+    {
+      "id": "key-H",
+      "anchor": {
+        "q": 7,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "H",
+        "pitch": 11
+      },
+      "tags": []
+    },
+    {
+      "id": "key-J",
+      "anchor": {
+        "q": 8,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "J",
+        "pitch": 0
+      },
+      "tags": []
+    },
+    {
+      "id": "key-K",
+      "anchor": {
+        "q": 9,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "K",
+        "pitch": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "key-L",
+      "anchor": {
+        "q": 10,
+        "r": 2
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "L",
+        "pitch": 2
+      },
+      "tags": []
+    },
+    {
+      "id": "key-enter",
+      "anchor": {
+        "q": 11,
+        "r": 2
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Enter",
+        "pitch": 3
+      },
+      "tags": []
+    },
+    {
+      "id": "key-shift-l",
+      "anchor": {
+        "q": 0,
+        "r": 3
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Shift",
+        "pitch": 6
+      },
+      "tags": []
+    },
+    {
+      "id": "key-Z",
+      "anchor": {
+        "q": 3,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Z",
+        "pitch": 9
+      },
+      "tags": []
+    },
+    {
+      "id": "key-X",
+      "anchor": {
+        "q": 4,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "X",
+        "pitch": 10
+      },
+      "tags": []
+    },
+    {
+      "id": "key-C",
+      "anchor": {
+        "q": 5,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "C",
+        "pitch": 11
+      },
+      "tags": []
+    },
+    {
+      "id": "key-V",
+      "anchor": {
+        "q": 6,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "V",
+        "pitch": 0
+      },
+      "tags": []
+    },
+    {
+      "id": "key-B",
+      "anchor": {
+        "q": 7,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "B",
+        "pitch": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "key-N",
+      "anchor": {
+        "q": 8,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "N",
+        "pitch": 2
+      },
+      "tags": []
+    },
+    {
+      "id": "key-M",
+      "anchor": {
+        "q": 9,
+        "r": 3
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "M",
+        "pitch": 3
+      },
+      "tags": []
+    },
+    {
+      "id": "key-shift-r",
+      "anchor": {
+        "q": 10,
+        "r": 3
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Shift",
+        "pitch": 4
+      },
+      "tags": []
+    },
+    {
+      "id": "key-ctrl",
+      "anchor": {
+        "q": 0,
+        "r": 4
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Ctrl",
+        "pitch": 8
+      },
+      "tags": []
+    },
+    {
+      "id": "key-alt",
+      "anchor": {
+        "q": 1,
+        "r": 4
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Alt",
+        "pitch": 9
+      },
+      "tags": []
+    },
+    {
+      "id": "key-space",
+      "anchor": {
+        "q": 3,
+        "r": 4
+      },
+      "span": [
+        {
+          "q": 1,
+          "r": 0
+        },
+        {
+          "q": 2,
+          "r": 0
+        },
+        {
+          "q": 3,
+          "r": 0
+        },
+        {
+          "q": 4,
+          "r": 0
+        },
+        {
+          "q": 5,
+          "r": 0
+        },
+        {
+          "q": 6,
+          "r": 0
+        },
+        {
+          "q": 7,
+          "r": 0
+        },
+        {
+          "q": 8,
+          "r": 0
+        }
+      ],
+      "type": "key",
+      "data": {
+        "label": "Space",
+        "pitch": 11
+      },
+      "tags": []
+    },
+    {
+      "id": "key-altgr",
+      "anchor": {
+        "q": 12,
+        "r": 4
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "AltGr",
+        "pitch": 8
+      },
+      "tags": []
+    },
+    {
+      "id": "key-fn",
+      "anchor": {
+        "q": 13,
+        "r": 4
+      },
+      "span": [],
+      "type": "key",
+      "data": {
+        "label": "Fn",
+        "pitch": 9
+      },
+      "tags": []
+    }
+  ],
+  "regions": [],
+  "turns": {
+    "type": "free",
+    "order": [],
+    "first": "typist"
+  },
+  "outcomes": [],
+  "interpretation": {
+    "view": "keyboard"
+  },
+  "base": {
+    "occupants": [],
+    "width": 15,
+    "height": 5
+  },
+  "morphs": [
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-1",
+          "anchor": {
+            "q": 0,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "1",
+            "pitch": 0
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-2",
+          "anchor": {
+            "q": 1,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "2",
+            "pitch": 1
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-3",
+          "anchor": {
+            "q": 2,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "3",
+            "pitch": 2
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-4",
+          "anchor": {
+            "q": 3,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "4",
+            "pitch": 3
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-5",
+          "anchor": {
+            "q": 4,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "5",
+            "pitch": 4
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-6",
+          "anchor": {
+            "q": 5,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "6",
+            "pitch": 5
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-7",
+          "anchor": {
+            "q": 6,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "7",
+            "pitch": 6
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-8",
+          "anchor": {
+            "q": 7,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "8",
+            "pitch": 7
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-9",
+          "anchor": {
+            "q": 8,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "9",
+            "pitch": 8
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-0",
+          "anchor": {
+            "q": 9,
+            "r": 0
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "0",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-backspace",
+          "anchor": {
+            "q": 10,
+            "r": 0
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Bksp",
+            "pitch": 10
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-tab",
+          "anchor": {
+            "q": 0,
+            "r": 1
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Tab",
+            "pitch": 2
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-Q",
+          "anchor": {
+            "q": 2,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Q",
+            "pitch": 4
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-W",
+          "anchor": {
+            "q": 3,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "W",
+            "pitch": 5
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-E",
+          "anchor": {
+            "q": 4,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "E",
+            "pitch": 6
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-R",
+          "anchor": {
+            "q": 5,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "R",
+            "pitch": 7
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-T",
+          "anchor": {
+            "q": 6,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "T",
+            "pitch": 8
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-Y",
+          "anchor": {
+            "q": 7,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Y",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-U",
+          "anchor": {
+            "q": 8,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "U",
+            "pitch": 10
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-I",
+          "anchor": {
+            "q": 9,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "I",
+            "pitch": 11
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-O",
+          "anchor": {
+            "q": 10,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "O",
+            "pitch": 0
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-P",
+          "anchor": {
+            "q": 11,
+            "r": 1
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "P",
+            "pitch": 1
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-caps",
+          "anchor": {
+            "q": 0,
+            "r": 2
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Caps",
+            "pitch": 4
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-A",
+          "anchor": {
+            "q": 2,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "A",
+            "pitch": 6
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-S",
+          "anchor": {
+            "q": 3,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "S",
+            "pitch": 7
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-D",
+          "anchor": {
+            "q": 4,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "D",
+            "pitch": 8
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-F",
+          "anchor": {
+            "q": 5,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "F",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-G",
+          "anchor": {
+            "q": 6,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "G",
+            "pitch": 10
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-H",
+          "anchor": {
+            "q": 7,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "H",
+            "pitch": 11
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-J",
+          "anchor": {
+            "q": 8,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "J",
+            "pitch": 0
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-K",
+          "anchor": {
+            "q": 9,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "K",
+            "pitch": 1
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-L",
+          "anchor": {
+            "q": 10,
+            "r": 2
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "L",
+            "pitch": 2
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-enter",
+          "anchor": {
+            "q": 11,
+            "r": 2
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Enter",
+            "pitch": 3
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-shift-l",
+          "anchor": {
+            "q": 0,
+            "r": 3
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Shift",
+            "pitch": 6
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-Z",
+          "anchor": {
+            "q": 3,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Z",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-X",
+          "anchor": {
+            "q": 4,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "X",
+            "pitch": 10
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-C",
+          "anchor": {
+            "q": 5,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "C",
+            "pitch": 11
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-V",
+          "anchor": {
+            "q": 6,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "V",
+            "pitch": 0
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-B",
+          "anchor": {
+            "q": 7,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "B",
+            "pitch": 1
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-N",
+          "anchor": {
+            "q": 8,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "N",
+            "pitch": 2
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-M",
+          "anchor": {
+            "q": 9,
+            "r": 3
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "M",
+            "pitch": 3
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-shift-r",
+          "anchor": {
+            "q": 10,
+            "r": 3
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            },
+            {
+              "q": 4,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Shift",
+            "pitch": 4
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-ctrl",
+          "anchor": {
+            "q": 0,
+            "r": 4
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Ctrl",
+            "pitch": 8
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-alt",
+          "anchor": {
+            "q": 1,
+            "r": 4
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Alt",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-space",
+          "anchor": {
+            "q": 3,
+            "r": 4
+          },
+          "span": [
+            {
+              "q": 1,
+              "r": 0
+            },
+            {
+              "q": 2,
+              "r": 0
+            },
+            {
+              "q": 3,
+              "r": 0
+            },
+            {
+              "q": 4,
+              "r": 0
+            },
+            {
+              "q": 5,
+              "r": 0
+            },
+            {
+              "q": 6,
+              "r": 0
+            },
+            {
+              "q": 7,
+              "r": 0
+            },
+            {
+              "q": 8,
+              "r": 0
+            }
+          ],
+          "type": "key",
+          "data": {
+            "label": "Space",
+            "pitch": 11
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-altgr",
+          "anchor": {
+            "q": 12,
+            "r": 4
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "AltGr",
+            "pitch": 8
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    },
+    {
+      "name": "key.define",
+      "params": {
+        "occ": {
+          "id": "key-fn",
+          "anchor": {
+            "q": 13,
+            "r": 4
+          },
+          "span": [],
+          "type": "key",
+          "data": {
+            "label": "Fn",
+            "pitch": 9
+          },
+          "tags": []
+        }
+      },
+      "inverse": {
+        "prev": null
+      }
+    }
+  ]
+}

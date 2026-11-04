@@ -1,9 +1,13 @@
-// ---------- Morph registry: named, reversible plan transformations ----------
-// Runtime from README 9.1. A stored plan is still loadable as a state
-// snapshot, but the principled form is a base plus a morph sequence, replayed
-// here. Each morph is pure (never mutates its input) and either invertible or
-// explicitly marked otherwise; non-invertible morphs carry the sub-state they
-// need inside the undo frame (see AppliedMorph.inverse).
+// ---------- Morph registry: the Grid-scope instance of the shared core ----------
+// The single implementation lives in `./scoped.ts` (`createMorphRegistry<S>`).
+// This module is the PlanState scope instance over that core — one scoped map
+// for every Grid vocabulary (grid, sheet, player, cursor, Grid-hosted tree).
+// Disjoint scopes (TreeState in `tree2.ts`) create their own instance from the
+// same factory, so registration, validation, replay, undo, and chain surgery
+// share one contract. The exported names here are unchanged, so shells and
+// the verify script keep working while running on the shared machinery.
+import { createMorphRegistry } from "./scoped";
+import type { ScopedMorphDef } from "./scoped";
 import type { Occupant } from "../types";
 import type { TraversalCursor } from "../traversal";
 
@@ -26,34 +30,11 @@ export type MorphContext = {
   height?: number;
 };
 
-export type MorphDef<P = unknown> = {
-  name: string;
-  describe: string;
-  /** False when popping this morph must fall back to a snapshot restore. */
-  invertible: boolean;
+export type MorphDef<P = unknown> = Omit<ScopedMorphDef<PlanState, P>, "validate" | "check" | "capture" | "apply" | "invert"> & {
   validate: (params: P, ctx: MorphContext) => string[];
-  /**
-   * State-dependent applicability: does this morph make sense against this
-   * exact state (anchor in bounds, target occupant present)? Used when
-   * testing a candidate morph and when replaying dependent steps after an
-   * earlier morph is removed or replaced. Absent means always applicable
-   * once validated.
-   */
   check?: (state: PlanState, params: P, ctx: MorphContext) => string[];
-  /**
-   * Capture the inverse frame for applying these params to this state, so a
-   * later undo restores exactly the pre-step sub-state. Used to re-derive
-   * frames after chain surgery and on plan load, where stored frames may be
-   * stale or hand-written. Absent means frames cannot be re-derived.
-   */
   capture?: (state: PlanState, params: P) => unknown;
   apply: (state: PlanState, params: P) => PlanState;
-  /**
-   * Only called when invertible. undoCtx is AppliedMorph.inverse. Throw when
-   * the undo frame is absent or unusable so the caller falls back to a
-   * snapshot restore instead of guessing — a faulty inverse must never
-   * silently claim success.
-   */
   invert: (state: PlanState, params: P, undoCtx: unknown) => PlanState;
 };
 
@@ -63,6 +44,14 @@ export type AppliedMorph<P = unknown> = {
   /** Sub-state captured at apply time for a faithful inverse (Q4 policy). */
   inverse?: unknown;
 };
+
+export const clonePlanState = (s: PlanState): PlanState => ({
+  ...s,
+  occupants: [...s.occupants],
+});
+
+/** The shared Grid-scope registry all Grid vocabularies register into. */
+export const gridRegistry = createMorphRegistry<PlanState>();
 
 /**
  * Shared strict frame reader: an absent or content-free undo frame is a
@@ -77,49 +66,27 @@ export function needPrevFrame<T>(undoCtx: unknown, morph: string): { prev?: T | 
   return undoCtx as { prev?: T | null };
 }
 
-const REGISTRY = new Map<string, MorphDef<any>>();
-
 export function registerMorph<P>(def: MorphDef<P>): void {
-  if (REGISTRY.has(def.name)) throw new Error(`Morph "${def.name}" already registered`);
-  REGISTRY.set(def.name, def as MorphDef<any>);
+  gridRegistry.register(def as ScopedMorphDef<PlanState, P>);
 }
 
 export function getMorph(name: string): MorphDef<any> | undefined {
-  return REGISTRY.get(name);
+  return gridRegistry.get(name) as MorphDef<any> | undefined;
 }
 
 /** Introspection: what can be morphed next (README 9.1, principle 5). */
 export function listMorphs(): MorphDef<any>[] {
-  return [...REGISTRY.values()];
+  return gridRegistry.list() as MorphDef<any>[];
 }
 
-/** Introspection: what has been morphed so far, in human terms. */
+/** Introspection: what has been applied so far, in human terms. */
 export function describeChain(chain: AppliedMorph[]): string[] {
-  return chain.map((m, i) => {
-    const def = REGISTRY.get(m.name);
-    return `${i + 1}. ${def ? def.describe : m.name} ${JSON.stringify(m.params)}`;
-  });
+  return gridRegistry.describeChain(chain);
 }
 
 /** Validate a stored morph sequence without running it. AI-actionable errors. */
 export function validateChain(chain: unknown, ctx: MorphContext = {}): string[] {
-  if (!Array.isArray(chain)) return ["plan.morphs must be an array"];
-  const errors: string[] = [];
-  chain.forEach((m: any, i: number) => {
-    if (!m || typeof m.name !== "string") {
-      errors.push(`morphs[${i}] missing name`);
-      return;
-    }
-    const def = REGISTRY.get(m.name);
-    if (!def) {
-      errors.push(
-        `morphs[${i}] unknown morph "${m.name}" (available: ${[...REGISTRY.keys()].join(", ") || "none"})`
-      );
-      return;
-    }
-    for (const e of def.validate(m.params, ctx)) errors.push(`morphs[${i}] (${m.name}): ${e}`);
-  });
-  return errors;
+  return gridRegistry.validateChain(chain, ctx);
 }
 
 export function applyMorph(
@@ -127,16 +94,7 @@ export function applyMorph(
   applied: AppliedMorph,
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
-  const def = REGISTRY.get(applied.name);
-  if (!def) {
-    return {
-      ok: false,
-      errors: [`unknown morph "${applied.name}" (available: ${[...REGISTRY.keys()].join(", ") || "none"})`],
-    };
-  }
-  const errs = def.validate(applied.params, ctx);
-  if (errs.length > 0) return { ok: false, errors: errs };
-  return { ok: true, state: def.apply(state, applied.params) };
+  return gridRegistry.applyMorph(state, applied, ctx);
 }
 
 /** Replay a morph sequence over a base state. Pure; base is never mutated. */
@@ -145,13 +103,7 @@ export function replayMorphs(
   chain: AppliedMorph[],
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
-  let state: PlanState = { ...base, occupants: [...base.occupants] };
-  for (let i = 0; i < chain.length; i++) {
-    const res = applyMorph(state, chain[i], ctx);
-    if (!res.ok) return { ok: false, errors: res.errors.map(e => `morphs[${i}]: ${e}`) };
-    state = res.state;
-  }
-  return { ok: true, state };
+  return gridRegistry.replayMorphs(base, chain, ctx, clonePlanState);
 }
 
 /**
@@ -160,13 +112,7 @@ export function replayMorphs(
  * a snapshot restore (the pragmatic stand-in, kept deliberately).
  */
 export function invertMorph(state: PlanState, applied: AppliedMorph): PlanState | null {
-  const def = REGISTRY.get(applied.name);
-  if (!def || !def.invertible) return null;
-  try {
-    return def.invert(state, applied.params, applied.inverse);
-  } catch {
-    return null;
-  }
+  return gridRegistry.invertMorph(state, applied);
 }
 
 /**
@@ -180,16 +126,7 @@ export function checkMorphState(
   params: unknown,
   ctx: MorphContext = {}
 ): string[] {
-  const def = REGISTRY.get(name);
-  if (!def) {
-    return [`unknown morph "${name}" (available: ${[...REGISTRY.keys()].join(", ") || "none"})`];
-  }
-  const errors = def.validate(params, ctx).map(e => `${name}: ${e}`);
-  if (errors.length > 0) return errors;
-  if (def.check) {
-    for (const e of def.check(state, params, ctx)) errors.push(`${name}: ${e}`);
-  }
-  return errors;
+  return gridRegistry.checkMorphState(name, state, params, ctx);
 }
 
 /**
@@ -202,17 +139,7 @@ export function replayMorphsChecked(
   chain: AppliedMorph[],
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState } | { ok: false; errors: string[] } {
-  let state: PlanState = { ...base, occupants: [...base.occupants] };
-  for (let i = 0; i < chain.length; i++) {
-    const stepErrors = checkMorphState(chain[i].name, state, chain[i].params, ctx);
-    if (stepErrors.length > 0) {
-      return { ok: false, errors: stepErrors.map(e => `morphs[${i}]: ${e}`) };
-    }
-    const def = REGISTRY.get(chain[i].name);
-    if (!def) return { ok: false, errors: [`morphs[${i}]: unknown morph "${chain[i].name}"`] };
-    state = def.apply(state, chain[i].params);
-  }
-  return { ok: true, state };
+  return gridRegistry.replayMorphsChecked(base, chain, ctx, clonePlanState);
 }
 
 /**
@@ -227,35 +154,13 @@ export function recaptureFrames(
   chain: AppliedMorph[],
   _ctx: MorphContext = {}
 ): AppliedMorph[] {
-  let state: PlanState = { ...base, occupants: [...base.occupants] };
-  return chain.map((m) => {
-    const def = REGISTRY.get(m.name);
-    let inverse: unknown = undefined;
-    if (def?.capture) {
-      try {
-        inverse = def.capture(state, m.params);
-      } catch {
-        inverse = undefined;
-      }
-    } else if (!def) {
-      inverse = m.inverse;
-    }
-    if (def) {
-      try {
-        state = def.apply(state, m.params);
-      } catch {
-        // Leave the state as-is; the checked replay reports the failure.
-      }
-    }
-    return { ...m, inverse };
-  });
+  return gridRegistry.recaptureFrames(base, chain, clonePlanState);
 }
 
 /**
  * Remove an earlier morph and replay the dependent steps over the base.
- * A later step that no longer applies (for example it removes the occupant
- * the deleted step created) is reported as a conflict with its step index —
- * the chain is left unchanged for the caller to resolve.
+ * Shared chain surgery from the scoped core; conflicts report the step index
+ * and leave the chain unchanged for the caller to resolve.
  */
 export function removeMorphAt(
   base: PlanState,
@@ -263,18 +168,7 @@ export function removeMorphAt(
   index: number,
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState; chain: AppliedMorph[] } | { ok: false; errors: string[] } {
-  if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
-    return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
-  }
-  const next = recaptureFrames(base, chain.filter((_, i) => i !== index), ctx);
-  const replayed = replayMorphsChecked(base, next, ctx);
-  if (!replayed.ok) {
-    return {
-      ok: false,
-      errors: [`removing morphs[${index}] (${chain[index].name}) breaks dependents:`, ...replayed.errors],
-    };
-  }
-  return { ok: true, state: replayed.state, chain: next };
+  return gridRegistry.removeAt(base, chain, index, ctx, clonePlanState);
 }
 
 /**
@@ -288,22 +182,5 @@ export function replaceMorphAt(
   replacement: AppliedMorph,
   ctx: MorphContext = {}
 ): { ok: true; state: PlanState; chain: AppliedMorph[] } | { ok: false; errors: string[] } {
-  if (!Number.isInteger(index) || index < 0 || index >= chain.length) {
-    return { ok: false, errors: [`no morph at index ${index} (chain has ${chain.length})`] };
-  }
-  if (!replacement || typeof replacement.name !== "string") {
-    return { ok: false, errors: ["replacement morph needs a name"] };
-  }
-  if (!REGISTRY.get(replacement.name)) {
-    return { ok: false, errors: [`unknown morph "${replacement.name}"`] };
-  }
-  const next = recaptureFrames(base, chain.map((m, i) => (i === index ? replacement : m)), ctx);
-  const replayed = replayMorphsChecked(base, next, ctx);
-  if (!replayed.ok) {
-    return {
-      ok: false,
-      errors: [`replacing morphs[${index}] with ${replacement.name} breaks dependents:`, ...replayed.errors],
-    };
-  }
-  return { ok: true, state: replayed.state, chain: next };
+  return gridRegistry.replaceAt(base, chain, index, replacement, ctx, clonePlanState);
 }

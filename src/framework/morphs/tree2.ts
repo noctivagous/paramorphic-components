@@ -218,21 +218,43 @@ export function chainForTreeSave(
   chain: TreePlanFile["morphs"],
   current: TreeState
 ): { ok: true; base: TreeState; morphs: TreePlanFile["morphs"]; checkpointed: boolean } | { ok: false; errors: string[] } {
-  // Publish the full chain only when the loader itself would accept it:
-  // valid base, array chain, clean param validation, checked replay, and an
-  // exact match. A valid current state can be checkpointed when the chain
-  // fails; an invalid current state must be rejected instead.
+  // Save-publication rule shared with Grid chains (see
+  // `publishesFullChain` on the scoped core): publish the full chain only
+  // when the loader itself would accept it — valid base, array chain, clean
+  // param validation, checked replay, and an exact match. A valid current
+  // state can be checkpointed when the chain fails; an invalid current
+  // state must be rejected instead.
   const baseOk =
     !!base && typeof base === "object" && checkTreeNodes((base as TreeState).nodes).length === 0;
   const currentErrors = checkTreeNodes(current?.nodes);
   if (currentErrors.length > 0) {
     return { ok: false, errors: currentErrors.map(e => `current.${e}`) };
   }
-  if (baseOk && Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0) {
-    const replayed = treeRegistry.replayMorphsChecked(base, chain, {}, cloneTreeState);
-    if (replayed.ok && treeNodesEqual(replayed.state, current) === null) {
-      return { ok: true, base, morphs: chain, checkpointed: false };
-    }
+  const chainValid = Array.isArray(chain) && treeRegistry.validateChain(chain).length === 0;
+  const replayed = chainValid
+    ? treeRegistry.replayMorphsChecked(base, chain, {}, cloneTreeState)
+    : ({ ok: false, errors: [] } as const);
+  const matches = replayed.ok && treeNodesEqual(replayed.state, current) === null;
+  if (treeRegistry.publishesFullChain(baseOk, chainValid, replayed.ok, matches)) {
+    return { ok: true, base, morphs: chain, checkpointed: false };
   }
   return { ok: true, base: cloneTreeState(current), morphs: [], checkpointed: true };
+}
+
+/** Chain surgery for disjoint Tree chains through the same scoped core. */
+export function removeTreeMorphAt(
+  base: TreeState,
+  chain: TreePlanFile["morphs"],
+  index: number
+): { ok: true; state: TreeState; chain: TreePlanFile["morphs"] } | { ok: false; errors: string[] } {
+  return treeRegistry.removeAt(base, chain, index, {}, cloneTreeState);
+}
+
+export function replaceTreeMorphAt(
+  base: TreeState,
+  chain: TreePlanFile["morphs"],
+  index: number,
+  replacement: TreePlanFile["morphs"][number]
+): { ok: true; state: TreeState; chain: TreePlanFile["morphs"] } | { ok: false; errors: string[] } {
+  return treeRegistry.replaceAt(base, chain, index, replacement, {}, cloneTreeState);
 }
