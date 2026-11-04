@@ -135,6 +135,8 @@ The first three share Grid state, morph registration, replay, and undo machinery
 
 The larger vision is still ahead: plans configure parts of these apps, but custom code still supplies much of their behavior. Tree and the other component families aren’t yet demonstrated in complete apps, and we haven’t measured whether AI can reliably assemble varied interfaces faster from plans.
 
+Run `npm test`, `npm run lint:boundaries`, and `npm run typecheck` for the automated baseline. CI also builds each demo. Core is the framework source excluding its assembly entry point, presets, morph vocabularies, app kits, plan kits, and platform adapters; the boundary check prevents core from importing those layers or app code. The entry point is intentionally allowed to assemble vocabularies. `npm run metrics` reports per-app nonblank source and plan lines, and `npm run metrics -- --json` lists the files counted. Reachable framework lines include barrel re-exports, not necessarily executed or shipped code. See `measurements/README.md` for how to record draft time, AI validity, corrections, and review effort; these are not inferred from source.
+
 > How do we make it so that apps like checkers, chess, calendars, timeine editors etc. have less custom code ?
 
 We reduce custom code by moving recurring capabilities into configurable shared components, then describing each app’s choices in its plan.

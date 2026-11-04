@@ -6,7 +6,6 @@
 // Formula evaluation stays in the derivation mechanism (`formulas.ts`).
 import type { Occupant } from "./types";
 import { removeOccupant, upsertOccupant } from "./editing";
-import { applyFormulas } from "./morphs/formulas";
 
 export type CellPresentationKind = "editableText" | "readOnly" | "eventCard";
 
@@ -55,7 +54,7 @@ export function editingPolicies(config?: GridPresentationConfig): CellEditingPol
   return { ...TEXT_POLICIES, ...editing };
 }
 
-const bindingField = (path: string | undefined): string | undefined => {
+export const bindingField = (path: string | undefined): string | undefined => {
   const name = /^data\.([A-Za-z_$][\w$]*)$/.exec(path ?? "")?.[1];
   return name && !["__proto__", "constructor", "prototype"].includes(name) ? name : undefined;
 };
@@ -147,16 +146,6 @@ export function colName(q: number): string {
 
 function blankCell(q: number, r: number): Occupant {
   return { id: `c-${q}-${r}`, anchor: { q, r }, span: [], type: "cell", data: {}, tags: [] };
-}
-
-/** Evaluate expressions only when the editing policy enables formulas. */
-export function derivePresentedCells(occupants: Occupant[], config?: GridPresentationConfig) {
-  if (!config || editingPolicies(config).expressions !== "formula") return { occupants, errors: [] as string[] };
-  const value = bindingField(config.cell.value);
-  const formula = bindingField(config.cell.formula);
-  const computed = bindingField(config.cell.computed);
-  if (!value || !formula || !computed) return { occupants, errors: ["Formula derivation requires value, formula, and computed bindings"] };
-  return applyFormulas(occupants, { value, formula, computed });
 }
 
 /**

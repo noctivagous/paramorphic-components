@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:boundaries
+      - run: npm run lint:rules
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run metrics
+      - run: npm run build
+      - run: npm run build:spreadsheet
+      - run: npm run build:player
+      - run: npm run build:keyboard
+      - run: npm run build:browser

@@ -1,0 +1,16 @@
+import { strict as assert } from 'node:assert';
+import { canActOn, nextTurn } from '../src/framework/engine';
+const alternating = { type: 'alternating' as const, order: ['white', 'black'], first: 'white' };
+const capture = { type: 'samePlayerIfCapture' as const, order: ['white', 'black'], first: 'white' };
+const free = { type: 'free' as const };
+assert.equal(nextTurn(alternating, 'white', false), 'black');
+assert.equal(nextTurn(alternating, 'white', true), 'black');
+assert.equal(nextTurn(capture, 'white', true), 'white');
+assert.equal(nextTurn(capture, 'white', false), 'black');
+assert.equal(nextTurn(free, 'white', false), 'white');
+assert.equal(canActOn(alternating, 'white', 'black'), false);
+assert.equal(canActOn(alternating, 'white', 'unknown'), false);
+assert.equal(canActOn(capture, 'white', undefined), false);
+assert.equal(canActOn(capture, 'white', 'white'), true);
+assert.equal(canActOn(free, 'white', undefined), true);
+console.log('Turn policies pass');

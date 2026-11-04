@@ -5,6 +5,7 @@
 // AI can act on. Wiring (which cells feed which) is derived with
 // formulaDependencies and evaluated in order with derivation.ts.
 import type { Occupant } from "../types";
+import { bindingField, editingPolicies, type GridPresentationConfig } from "../presentations";
 
 export type NumberLookup = (col: number, row: number) => number;
 
@@ -206,6 +207,16 @@ export function occupantValueLookup(occupants: Occupant[], valueField = "value")
 // mutates. Cycles and cell errors come back as messages, not throws, so a
 // sheet stays usable while one cell is broken.
 export type FormulaRecalc = { occupants: Occupant[]; errors: string[] };
+
+/** Connect a presentation's optional formula policy to this vocabulary. */
+export function derivePresentedCells(occupants: Occupant[], config?: GridPresentationConfig): FormulaRecalc {
+  if (!config || editingPolicies(config).expressions !== "formula") return { occupants, errors: [] };
+  const value = bindingField(config.cell.value);
+  const formula = bindingField(config.cell.formula);
+  const computed = bindingField(config.cell.computed);
+  if (!value || !formula || !computed) return { occupants, errors: ["Formula derivation requires value, formula, and computed bindings"] };
+  return applyFormulas(occupants, { value, formula, computed });
+}
 
 export function applyFormulas(occupants: Occupant[], fields: { value: string; formula: string; computed: string } = { value: "value", formula: "formula", computed: "computed" }): FormulaRecalc {
   const isFormulaCell = (o: Occupant) => typeof (o.data as any)?.[fields.formula] === "string";

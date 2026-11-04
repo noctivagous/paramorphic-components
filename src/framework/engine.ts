@@ -2,6 +2,17 @@ import type { Axial, LogicTriple, MoveKind, MoveRule, Occupant, OutcomeCondition
 import { addPosByDir, applyOffset, lineCells } from "./tilings";
 import { basePieceType, buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occupantAtCell, pieceMatchesRule } from "./occupancy";
 
+/** Shared turn policy for moves and placements. */
+export function nextTurn(turns: RuleSet['turns'], current: string, captured: boolean): string {
+  if (turns.type === 'free' || (turns.type === 'samePlayerIfCapture' && captured)) return current;
+  const index = turns.order.indexOf(current);
+  return index < 0 || turns.order.length === 0 ? current : turns.order[(index + 1) % turns.order.length];
+}
+
+export function canActOn(turns: RuleSet['turns'], current: string, owner: unknown): boolean {
+  return turns.type === 'free' || (typeof owner === 'string' && owner === current && turns.order.includes(owner));
+}
+
 // DEBT (README 11.1): outcomes, promotion, gravity and placement are still
 // partly special-cased per game; they must become predicates over regions.
 // ---------- Move engine (generic, no hard-coded id) ----------

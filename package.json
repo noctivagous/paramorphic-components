@@ -20,7 +20,13 @@
     "preview:keyboard": "vite preview --config apps/keyboard/vite.config.ts",
     "dev:browser": "vite --config apps/browser/vite.config.ts",
     "build:browser": "vite build --config apps/browser/vite.config.ts",
-    "verify:browser": "esbuild scripts/verify-browser.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-browser.cjs --log-level=error && node /tmp/verify-browser.cjs"
+    "verify:browser": "esbuild scripts/verify-browser.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-browser.cjs --log-level=error && node /tmp/verify-browser.cjs",
+    "test": "node --test",
+    "lint:boundaries": "node scripts/import-boundaries.mjs",
+    "metrics": "node scripts/report-app-metrics.mjs",
+    "verify:tilings": "esbuild scripts/verify-tilings.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-tilings.cjs --log-level=error && node /tmp/verify-tilings.cjs",
+    "lint:rules": "node scripts/lint-rule-identity.mjs",
+    "verify:turns": "esbuild scripts/verify-turns.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-turns.cjs --log-level=error && node /tmp/verify-turns.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",

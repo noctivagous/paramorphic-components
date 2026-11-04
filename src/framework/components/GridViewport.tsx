@@ -3,7 +3,7 @@ import type { Axial, LogicTriple, MoveRule, Occupant, Pos, Region, RuleSet, Tili
 import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
 import { buildOccupancyMap, getOccupiedCells, isCellOccupied, isPosInRegion, occupantAtCell, pieceMatchesRule } from "../occupancy";
 import { makeId } from "../tilings";
-import { applySurroundCapture, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, ruleHasSurroundCapture } from "../engine";
+import { applySurroundCapture, canActOn, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, nextTurn, ruleHasSurroundCapture } from "../engine";
 import { colName, editingPolicies, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
@@ -237,12 +237,7 @@ export function GridViewport({
         setOccupants(newOccs);
         const out = checkOutcome(newOccs, player);
         if (out) setOutcome(out);
-        else if (ruleSet.turns.type === "alternating") {
-          const order = (ruleSet.turns as any).order;
-          const idx = order.indexOf(player);
-          const next = order[(idx + 1) % order.length];
-          setCurrentTurn(next);
-        }
+        else setCurrentTurn(nextTurn(ruleSet.turns, player, false));
       }
       return;
     }
@@ -252,10 +247,7 @@ export function GridViewport({
       if (!sel) return;
       // Turn ownership under both alternating and samePlayerIfCapture: a side
       // may only move its own pieces. Either side moving any piece was the bug.
-      if (ruleSet.turns.type === "alternating" || ruleSet.turns.type === "samePlayerIfCapture") {
-        const order = (ruleSet.turns as any).order;
-        if (sel.data?.player && order.includes(sel.data.player) && sel.data.player !== currentTurn) return;
-      }
+      if (!canActOn(ruleSet.turns, currentTurn, sel.data?.player)) return;
 
       let newOccs = [...occupants];
       const capMove = validMoves.find((m: any) => m.q === q && m.r === r) as any;
@@ -296,26 +288,15 @@ export function GridViewport({
       const out = checkOutcome(newOccs, currentTurn);
       if (out) setOutcome(out);
       else {
-        if (ruleSet.turns.type === "alternating") {
-          const order = (ruleSet.turns as any).order;
-          const idx = order.indexOf(currentTurn);
-          const next = order[(idx + 1) % order.length] || currentTurn;
-          // samePlayerIfCapture handled above
-          setCurrentTurn(next);
-        } else if (ruleSet.turns.type === "samePlayerIfCapture") {
-          if (!capMove?.capture) {
-            const order = (ruleSet.turns as any).order;
-            const idx = order.indexOf(currentTurn);
-            setCurrentTurn(order[(idx + 1) % order.length]);
-          }
-        }
+        setCurrentTurn(nextTurn(ruleSet.turns, currentTurn, !!capMove?.capture));
         setSelectedId(null);
         setValidMoves([]);
       }
     } else if (clickedOcc) {
       // Ownership gate for both turn disciplines; during an active chain only
       // the chaining piece may be touched.
-      if ((ruleSet.turns.type === "alternating" || ruleSet.turns.type === "samePlayerIfCapture") && clickedOcc.data?.player && clickedOcc.data?.player !== currentTurn) {
+      if (chainCaptureActive && clickedOcc.id !== selectedId) return;
+      if (!canActOn(ruleSet.turns, currentTurn, clickedOcc.data?.player)) {
         if (chainCaptureActive) return;
         // Pure placement games have no selectable pieces: ignore occupant taps.
         if (isPlaceRule && !selectedId) return;
@@ -339,11 +320,7 @@ export function GridViewport({
         setOccupants(newOccs);
         const out = checkOutcome(newOccs, player);
         if (out) setOutcome(out);
-        else if (ruleSet.turns.type === "alternating") {
-          const order = (ruleSet.turns as any).order;
-          const idx = order.indexOf(player);
-          setCurrentTurn(order[(idx + 1) % order.length]);
-        }
+        else setCurrentTurn(nextTurn(ruleSet.turns, player, false));
       } else {
         if (!chainCaptureActive) { setSelectedId(null); setValidMoves([]); }
       }

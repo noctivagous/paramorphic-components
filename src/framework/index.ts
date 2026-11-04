@@ -5,6 +5,7 @@
 export * from "./types";
 export * from "./graph-kernel";
 export * from "./tilings";
+export * from "./tiling-interface";
 export * from "./occupancy";
 export * from "./engine";
 export * from "./presets";

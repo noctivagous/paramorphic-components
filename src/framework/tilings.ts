@@ -167,7 +167,7 @@ export function rotateSpan(span: Pos[], steps: number, tiling: TilingDef): Pos[]
   if (tiling.shape === "square") {
     // 90 deg rotation
     let cur = span;
-    for (let s = 0; s < (steps % 4); s++) {
+    for (let s = 0; s < ((steps % 4 + 4) % 4); s++) {
       cur = cur.map(p => ({ q: -p.r, r: p.q }));
     }
     return cur;
@@ -178,7 +178,7 @@ export function rotateSpan(span: Pos[], steps: number, tiling: TilingDef): Pos[]
       const ax = offsetToAxial({ q: p.q, r: p.r }, tiling.id);
       // axial rotation 60 deg: (q,r) -> (-r, q+r)
       let q = ax.q, r = ax.r;
-      for (let i = 0; i < (steps % 6); i++) {
+      for (let i = 0; i < ((steps % 6 + 6) % 6); i++) {
         const nq = -r;
         const nr = q + r;
         q = nq; r = nr;

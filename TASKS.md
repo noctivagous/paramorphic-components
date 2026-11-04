@@ -52,6 +52,14 @@ Each app must run from its own validated plan, exercise real interactions, and h
 
 ## Evidence log
 
+### Mechanical baseline
+
+`npm test` uses Node's test runner for boundary regression tests, metrics checks, and the existing replay/browser verification scripts. `npm run lint:boundaries` checks core imports with TypeScript resolution; the framework entry point remains the assembly layer. CI runs these checks, typechecking, the metrics report, and all app builds. `npm run metrics -- --json` reports its counted files and nonblank lines; `measurements/README.md` defines how to record timing and review measures. §1 remains open: tiling, traversal, and game-rule coverage and measured app evaluations are still outstanding.
+
+### Tiling and turn groundwork
+
+`createTilingGeometry` exposes neighbors, normalized cell/point conversion, rotation, and distance for existing square and hex tilings. Exhaustive bounded checks cover symmetry, round trips, rotation order and inverse, and neighbor distance. Shared turn helpers enforce ownership and advance turns for placement and movement, including `samePlayerIfCapture`. `lint:rules` rejects direct `ruleSet.id` branches; it does not detect aliases or indirect checks. The requested morphable rules vocabulary, complete game plans, and full game acceptance tests remain open; current Chess and Checkers presets are simplified demos.
+
 ### 2026-11-04 — Reusable plan inventory
 
 Added a scoped recipe inventory and a spreadsheet recipe with dimensions, formula choice, and optional initial cells. Recipes generate ordinary validated, replayable plans; custom inventories can use another plan loader, and direct plan loading remains available. The spreadsheet shell can create a new sheet from the recipe. More recipes and app-kit composition remain future work.
