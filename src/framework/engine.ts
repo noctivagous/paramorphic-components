@@ -137,6 +137,21 @@ export function getValidMoves(
           const target = applyOffset(occ.anchor, off, tiling, width, height, toggles.wrapping);
           if (!target) continue;
           if (rule.requires?.darkOnly && (target.q + target.r) % 2 === 0) continue;
+          if (rule.jumpOver) {
+            // Jump-over capture (checkers): clear an enemy midpoint and land
+            // empty. Knights and other leapers keep landing-capture below.
+            // Midpoint math holds for even square-diagonal offsets; odd or
+            // off-grid midpoints cannot be jumped.
+            if (off.dq % 2 !== 0 || off.dr % 2 !== 0) continue;
+            const mid = { q: occ.anchor.q + off.dq / 2, r: occ.anchor.r + off.dr / 2 };
+            if (mid.q < 0 || mid.q >= width || mid.r < 0 || mid.r >= height) continue;
+            if (rule.requires?.darkOnly && (mid.q + mid.r) % 2 === 0) continue;
+            const midOcc = occMap.get(`${mid.q},${mid.r}`);
+            if (!midOcc || midOcc.data?.player === occ.data?.player) continue;
+            if (occMap.get(`${target.q},${target.r}`)) continue;
+            pushIf(target, midOcc.id, "leap");
+            continue;
+          }
           const targetCells = [target, ...occ.span.map(sp => ({ q: target.q + sp.q, r: target.r + sp.r }))];
           let blockedByOwn = false;
           let captureId: string | undefined;
