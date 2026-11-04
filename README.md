@@ -180,6 +180,10 @@ Checkers and chess share various facets and base structures, and that what the f
 | Outcome | Capture or block all opposing pieces | Checkmate or a draw condition | Win, loss and draw conditions, written as predicates over regions |
 | End | The game stops when an outcome holds | The same | A termination test |
 
+Chess can also test composition: the Grid holds the board and occupants; attached Logic relations describe pieces, positions, turns, and legal moves; and a Tree configured as a decision tree expresses conditional behavior, such as a pawn's movement and capture choices. The plan would configure those parts and their connections. This is an intended design to validate, not a description of the current demo: today's simplified Chess uses the game engine's rule data rather than a composed Logic and decision-tree runtime.
+
+A Path can represent the ordered history of moves, with each step recording a move and connecting one board state to the next. A Tree can represent alternate variations branching from that history, such as different moves considered from the same position. This Path and Tree composition is also intended work, not yet part of the Chess demo.
+
 The same parts describe Tetris (empty well; fall and rotate; the stack reaches the top), Sudoku (the givens; place digits; every region satisfied) and a form wizard (blank form; fill and advance; validation passes). One rule-set shape of setup, moves, turns, outcome and end, defined once, is the contract the framework evaluates.
 
 Beyond rules, most apps store information, browse it and connect to a network. Those are covered by the other components.

@@ -14,6 +14,8 @@ export const OUTCOME_KINDS = [
   "boardFull",
   "fillRegions",
   "topReached",
+  "fiftyMove",
+  "threefoldRepetition",
 ];
 
 export const TURN_TYPES = ["alternating", "free", "samePlayerIfCapture"];
@@ -68,7 +70,13 @@ export function validateMoveKind(mk: any, path: string, tiling: TilingDef | null
     // no direction to check
     return [];
   }
-  return [`${path} unknown move type "${mk.type}" (available: step, slide, leap, leapRef, pawn, place)`];
+  if (mk.type === "castle") {
+    if ((mk as any).side !== "kingside" && (mk as any).side !== "queenside") {
+      return [`${path} castle side "${(mk as any).side}" unknown (available: kingside, queenside)`];
+    }
+    return [];
+  }
+  return [`${path} unknown move type "${mk.type}" (available: step, slide, leap, leapRef, pawn, place, castle)`];
 }
 
 export function validateMoveRule(mr: MoveRule, idx: number, tiling: TilingDef | null): string[] {
@@ -115,6 +123,9 @@ export function validateOutcome(o: any, idx: number, regionIds: Set<string>): st
     o.regions.forEach((rid: string) => {
       if (!regionIds.has(rid)) errors.push(`${path} region "${rid}" not found in regions`);
     });
+  }
+  if (o.kind === "fiftyMove" && o.limit !== undefined && (!Number.isInteger(o.limit) || o.limit <= 0)) {
+    errors.push(`${path} fiftyMove limit must be a positive integer`);
   }
   return errors;
 }

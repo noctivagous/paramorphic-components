@@ -28,7 +28,8 @@ export type MoveKind =
   | { type: "leap"; offsets: { dq: number; dr: number; axial?: Axial }[] }
   | { type: "leapRef"; ref: "knight" }
   | { type: "pawn"; forward: string | string[]; captureDirs: string[]; firstDouble?: boolean }
-  | { type: "place"; anywhere?: boolean };
+  | { type: "place"; anywhere?: boolean }
+  | { type: "castle"; side: "kingside" | "queenside" };
 
 export type MoveRule = {
   pieceType: string;
@@ -49,7 +50,9 @@ export type TurnRule =
 export type OutcomeCondition =
   | { kind: "line"; player: string; count: number; directions?: string[] | "any"; regions?: string[] | "all"; id?: string }
   | { kind: "captureAll"; player?: string; target?: string; winFor?: string; id?: string }
-  | { kind: "noMoves"; player: string; id?: string }
+  | { kind: "noMoves"; player: string; draw?: boolean; id?: string }
+  | { kind: "fiftyMove"; limit?: number; id?: string }
+  | { kind: "threefoldRepetition"; id?: string }
   | { kind: "kingCaptured"; player: string; id?: string }
   | { kind: "reachRow"; player: string; regionId: string; id?: string }
   | { kind: "boardFull"; draw?: boolean; id?: string }
