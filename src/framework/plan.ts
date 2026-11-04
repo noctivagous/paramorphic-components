@@ -2,6 +2,8 @@ import type { MoveRule, Occupant, Pos, Region, RuleSet, TilingDef, Toggles } fro
 import { TILINGS, getTiling } from "./tilings";
 import { gridRegistry, recaptureFrames, replayMorphs, replayMorphsChecked, validateChain, type AppliedMorph, type MorphContext, type PlanState } from "./morphs/registry";
 import { validatePresentationConfig } from "./presentations";
+import { ruleSetsEqual, validateMoveRule, validateOutcome, validateTurns } from "./rule-sets";
+import { loadRuleChain } from "./morphs/rules";
 import { cellsOf } from "./editing";
 
 // ---------- Plan parsing & validation ----------
@@ -124,54 +126,15 @@ export function validatePlan(data: any, tiling: TilingDef | null): string[] {
     if (!Array.isArray(data.ruleSet.moves)) errors.push("ruleSet.moves must be array");
     else {
       data.ruleSet.moves.forEach((mr: MoveRule, idx: number) => {
-        if (!mr.pieceType) errors.push(`moves[${idx}] missing pieceType`);
-        if (!Array.isArray(mr.moves)) errors.push(`moves[${idx}].moves must be array`);
-        else mr.moves.forEach((mk: any, j: number) => {
-          if (mk.type === "step" || mk.type === "slide") {
-            if (!mk.dir) errors.push(`moves[${idx}].moves[${j}] missing dir`);
-            else if (tilingToCheck && !tilingToCheck.directionMap[mk.dir]) {
-              errors.push(`direction ${mk.dir} not defined in tiling ${tilingToCheck.id}, available: ${tilingToCheck.directions.map(d => d.name).join(",")}`);
-            }
-          } else if (mk.type === "pawn") {
-            const forwards = Array.isArray(mk.forward) ? mk.forward : [mk.forward];
-            forwards.forEach((f: string) => {
-              if (tilingToCheck && !tilingToCheck.directionMap[f]) errors.push(`pawn forward direction ${f} not defined in tiling ${tilingToCheck.id}`);
-            });
-            (mk.captureDirs || []).forEach((cd: string) => {
-              if (tilingToCheck && !tilingToCheck.directionMap[cd]) errors.push(`pawn capture dir ${cd} not defined in tiling ${tilingToCheck.id}`);
-            });
-          } else if (mk.type === "leap") {
-            if (!Array.isArray(mk.offsets)) errors.push(`moves[${idx}].moves[${j}] leap missing offsets array`);
-            else mk.offsets.forEach((off: any, k: number) => {
-              if (typeof off?.dq !== "number" || typeof off?.dr !== "number") errors.push(`moves[${idx}].moves[${j}].offsets[${k}] needs numeric dq/dr`);
-            });
-          } else if (mk.type === "leapRef") {
-            if (mk.ref !== "knight") errors.push(`moves[${idx}].moves[${j}] unknown leap ref "${mk.ref}" (available: knight)`);
-            else if (tilingToCheck && tilingToCheck.leaps.offsets.length === 0) errors.push(`tiling ${tilingToCheck.id} defines no leap offsets for ref "knight"`);
-          } else if (mk.type === "place") {
-            // no direction to check
-          } else {
-            errors.push(`moves[${idx}].moves[${j}] unknown move type "${mk.type}" (available: step, slide, leap, leapRef, pawn, place)`);
-          }
-        });
+        for (const e of validateMoveRule(mr, idx, tilingToCheck)) errors.push(e);
       });
     }
-    if (!data.ruleSet.turns) errors.push("ruleSet.turns missing");
-    else {
-      const t = data.ruleSet.turns.type;
-      if (t !== "alternating" && t !== "free" && t !== "samePlayerIfCapture") errors.push(`ruleSet.turns.type "${t}" unknown (available: alternating, free, samePlayerIfCapture)`);
-    }
+    for (const e of validateTurns(data.ruleSet.turns)) errors.push(e);
     if (!Array.isArray(data.ruleSet.outcomes)) errors.push("ruleSet.outcomes must be array");
     else {
-      const known = ["line", "captureAll", "noMoves", "kingCaptured", "reachRow", "boardFull", "fillRegions", "topReached"];
       const regionIds = new Set([...(data.regions || []).map((r: any) => r.id), ...((data.ruleSet.regions || []).map((r: any) => r.id))]);
       data.ruleSet.outcomes.forEach((o: any, i: number) => {
-        if (!known.includes(o.kind)) errors.push(`outcomes[${i}] unknown kind "${o.kind}" (available: ${known.join(", ")})`);
-        if ((o.kind === "reachRow") && !o.regionId) errors.push(`outcomes[${i}] reachRow missing regionId`);
-        else if (o.kind === "reachRow" && !regionIds.has(o.regionId)) errors.push(`outcomes[${i}] region "${o.regionId}" not found in regions`);
-        if (o.kind === "line" && o.regions && o.regions !== "all" && Array.isArray(o.regions)) {
-          o.regions.forEach((rid: string) => { if (!regionIds.has(rid)) errors.push(`outcomes[${i}] region "${rid}" not found in regions`); });
-        }
+        for (const e of validateOutcome(o, i, regionIds)) errors.push(e);
       });
     }
     // span collision check at setup
@@ -298,6 +261,13 @@ export type LoadedPlan = {
   base: PlanBase;
   /** Normalized morph sequence; empty means snapshot-only plan. */
   morphs: AppliedMorph[];
+  /**
+   * Rule construction when the plan carries it: the base the rule chain
+   * replays over plus the normalized chain. Absent for configuration-only
+   * plans, which keep using the embedded ruleSet as today.
+   */
+  ruleBase?: RuleSet;
+  ruleMorphs?: AppliedMorph[];
 };
 
 /** Compare a replayed state against the cached snapshot, order-insensitively. */
@@ -452,6 +422,34 @@ export function loadPlan(
     // restores the states that actually occurred, not hand-written ones.
     morphs = recaptureFrames(base, morphs, { tilingId: data.tilingId });
   }
+  // Rule construction, when the plan carries it: replay the rule chain over
+  // its base (or the embedded ruleSet as a snapshot-only base) and require
+  // the result to match the embedded ruleSet, exactly like the board chain
+  // must match the cached snapshot. Configuration-only plans skip this and
+  // keep the embedded ruleSet untouched.
+  let ruleSetOut = data.ruleSet;
+  let ruleBaseOut: RuleSet | undefined;
+  let ruleMorphsOut: AppliedMorph[] = [];
+  if (data.ruleMorphs !== undefined || data.ruleBase !== undefined) {
+    const ruleBaseRaw = data.ruleBase ?? data.ruleSet;
+    const res = loadRuleChain(
+      { board: base, rules: ruleBaseRaw },
+      data.ruleMorphs,
+      { tilingId: data.tilingId }
+    );
+    if (!res.ok) {
+      for (const e of res.errors) errors.push(e);
+    } else {
+      const mismatch = ruleSetsEqual(res.rules, data.ruleSet);
+      if (mismatch) {
+        errors.push(`plan rule replay mismatch: ${mismatch}`);
+      } else {
+        ruleSetOut = res.rules;
+        ruleBaseOut = ruleBaseRaw;
+        ruleMorphsOut = res.chain;
+      }
+    }
+  }
   if (occupants) {
     for (const e of checkBoard(occupants, outWidth, outHeight)) errors.push(e);
   }
@@ -463,21 +461,23 @@ export function loadPlan(
       tilingId: data.tilingId,
       presetId: data.presetId || "custom",
       interpretation: data.interpretation ?? null,
-      ruleSet: data.ruleSet,
+      ruleSet: ruleSetOut,
       width: outWidth,
       height: outHeight,
       occupants,
       regions: Array.isArray(data.regions)
         ? data.regions
-        : Array.isArray(data.ruleSet?.regions)
-          ? data.ruleSet.regions
+        : Array.isArray(ruleSetOut?.regions)
+          ? ruleSetOut.regions
           : undefined,
       firstTurn:
-        (data.ruleSet?.turns as any)?.first ||
-        (data.ruleSet?.turns as any)?.order?.[0] ||
+        (ruleSetOut?.turns as any)?.first ||
+        (ruleSetOut?.turns as any)?.order?.[0] ||
         "white",
       base,
       morphs,
+      ruleBase: ruleBaseOut,
+      ruleMorphs: ruleMorphsOut,
     },
   };
 }

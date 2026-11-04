@@ -26,7 +26,8 @@
     "metrics": "node scripts/report-app-metrics.mjs",
     "verify:tilings": "esbuild scripts/verify-tilings.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-tilings.cjs --log-level=error && node /tmp/verify-tilings.cjs",
     "lint:rules": "node scripts/lint-rule-identity.mjs",
-    "verify:turns": "esbuild scripts/verify-turns.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-turns.cjs --log-level=error && node /tmp/verify-turns.cjs"
+    "verify:turns": "esbuild scripts/verify-turns.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-turns.cjs --log-level=error && node /tmp/verify-turns.cjs",
+    "verify:rules": "esbuild scripts/verify-rules.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-rules.cjs --log-level=error && node /tmp/verify-rules.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",
