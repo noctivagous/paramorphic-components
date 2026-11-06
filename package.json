@@ -37,6 +37,8 @@
     "preview:gui-builder": "vite preview --config apps/gui-builder/vite.config.ts --port 4177",
     "verify:gui": "esbuild scripts/verify-gui.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-gui.cjs --log-level=error && node /tmp/verify-gui.cjs",
     "verify:relations": "esbuild scripts/verify-relations.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-relations.cjs --log-level=error && node /tmp/verify-relations.cjs",
+    "export": "esbuild scripts/export-app.ts --bundle --platform=node --format=cjs --outfile=/tmp/export-app.cjs --log-level=error && node /tmp/export-app.cjs",
+    "verify:export": "esbuild scripts/verify-export.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-export.cjs --log-level=error && node /tmp/verify-export.cjs",
     "dev:supershape": "vite --config apps/supershape/vite.config.ts --port 5178",
     "build:supershape": "vite build --config apps/supershape/vite.config.ts",
     "preview:supershape": "vite preview --config apps/supershape/vite.config.ts --port 4178"
