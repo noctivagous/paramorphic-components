@@ -20,6 +20,29 @@ export function linePath(
   return { cells: lineCells(start, dir, count, tiling, width, height) };
 }
 
+/**
+ * Sample a continuous point list (e.g. a relation's bézier/supershape
+ * output) onto an ordered cell list the cursor can walk: points are
+ * normalized by their largest absolute coordinate into a gridSize ×
+ * gridSize board, rounded to cells, consecutive duplicates dropped. This
+ * is the bridge §8.4 describes — a curve becomes a TraversalPath, and
+ * riding it is this module's ordinary cursor work.
+ */
+export function cellsAlongPoints(points: { x: number; y: number }[], gridSize = 24): Pos[] {
+  if (points.length === 0 || gridSize < 2) return [];
+  const extent = Math.max(1e-9, ...points.map(p => Math.max(Math.abs(p.x), Math.abs(p.y))));
+  const cells: Pos[] = [];
+  for (const p of points) {
+    const cell = {
+      q: Math.round(((p.x / extent + 1) / 2) * (gridSize - 1)),
+      r: Math.round(((p.y / extent + 1) / 2) * (gridSize - 1)),
+    };
+    const last = cells[cells.length - 1];
+    if (!last || last.q !== cell.q || last.r !== cell.r) cells.push(cell);
+  }
+  return cells;
+}
+
 export type TraversalCursor = {
   path: TraversalPath;
   index: number; // last entered position; -1 = before the start

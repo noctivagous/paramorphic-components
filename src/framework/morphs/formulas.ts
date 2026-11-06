@@ -15,6 +15,7 @@
 // is never evaluated, so =IF(A1=0, 0, 1/A1) is safe at A1=0.
 import type { Occupant } from "../types";
 import { bindingField, colName, editingPolicies, type GridPresentationConfig } from "../presentations";
+import { evaluateItems } from "../relations";
 
 export type NumberLookup = (col: number, row: number) => number;
 
@@ -633,6 +634,34 @@ export function formulaDependencies(expr: string): string[] {
   return [...deps].sort();
 }
 
+export type FormulaRefToken =
+  | { kind: "cell"; col: number; row: number; ref: string }
+  | { kind: "range"; c0: number; r0: number; c1: number; r1: number; ref: string };
+
+/**
+ * The references a formula reads, as tokens: single cells stay single, a
+ * range stays one token (formulaDependencies expands it to cells). The
+ * relation bridge (relation-defs.ts) turns each token into an input port —
+ * a range ref is one `range` port.
+ */
+export function formulaRefTokens(expr: string): FormulaRefToken[] {
+  const src = expr.trim().startsWith("=") ? expr.trim().slice(1) : expr.trim();
+  const hits = scanRefs(src);
+  const tokens: FormulaRefToken[] = [];
+  for (let i = 0; i < hits.length; i++) {
+    const nxt = hits[i + 1];
+    if (nxt && src.slice(hits[i].end, nxt.start).trim() === ":") {
+      const c0 = Math.min(hits[i].col, nxt.col), c1 = Math.max(hits[i].col, nxt.col);
+      const r0 = Math.min(hits[i].row, nxt.row), r1 = Math.max(hits[i].row, nxt.row);
+      tokens.push({ kind: "range", c0, r0, c1, r1, ref: `${formatCellRef(c0, r0)}:${formatCellRef(c1, r1)}` });
+      i++;
+    } else {
+      tokens.push({ kind: "cell", col: hits[i].col, row: hits[i].row, ref: formatCellRef(hits[i].col, hits[i].row) });
+    }
+  }
+  return tokens;
+}
+
 // Spreadsheet convention: a cell's numeric value is occupant data.value;
 // missing or non-numeric reads as 0.
 export function occupantValueLookup(occupants: Occupant[], valueField = "value"): NumberLookup {
@@ -677,56 +706,11 @@ export function applyFormulas(occupants: Occupant[], fields: { value: string; fo
     }
     return [...new Set(out)];
   };
-  // Kahn's algorithm: a cycle quarantines only its own cells (and their
-  // dependents), never the whole sheet.
-  const ids = formulaCells.map(o => o.id);
-  const indeg = new Map(ids.map(id => [id, 0]));
-  const dependents = new Map(ids.map(id => [id, [] as string[]]));
-  for (const id of ids) {
-    for (const d of dependsOn(id)) {
-      indeg.set(id, indeg.get(id)! + 1);
-      dependents.get(d)!.push(id);
-    }
-  }
-  const queue = ids.filter(id => indeg.get(id) === 0);
-  const order: string[] = [];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    order.push(id);
-    for (const m of dependents.get(id)!) {
-      indeg.set(m, indeg.get(m)! - 1);
-      if (indeg.get(m) === 0) queue.push(m);
-    }
-  }
-  const errors: string[] = [];
-  const ordered = new Set(order);
-  const cyclic = ids.filter(id => !ordered.has(id));
-  if (cyclic.length > 0) {
-    errors.push(`[framework] derivation cycle detected: ${findLoop().join(" -> ")}`);
-  }
-  function findLoop(): string[] {
-    let loop: string[] | null = null;
-    const stack: string[] = [];
-    const onStack = new Set<string>();
-    const done = new Set<string>();
-    const visit = (id: string): void => {
-      if (loop !== null || done.has(id)) return;
-      if (onStack.has(id)) {
-        loop = [...stack.slice(stack.indexOf(id)), id];
-        return;
-      }
-      onStack.add(id);
-      stack.push(id);
-      for (const d of dependsOn(id)) if (!ordered.has(d)) visit(d);
-      stack.pop();
-      onStack.delete(id);
-      done.add(id);
-    };
-    for (const id of cyclic) visit(id);
-    return loop ?? cyclic;
-  }
+  // Ordering + quarantine run on the shared relation engine
+  // (relations.evaluateItems): a cycle quarantines only its own cells (and
+  // their dependents), never the whole sheet. The error surface below is
+  // byte-identical to the private Kahn pass this replaces.
   const computed = new Map<string, FormulaValue>();
-  const errored = new Set<string>(cyclic);
   // Raw lookup: a formula cell's computed result (once derived, in
   // dependency order) wins over its stored value; text cells read as text;
   // absent cells read as empty (null).
@@ -737,23 +721,30 @@ export function applyFormulas(occupants: Occupant[], fields: { value: string; fo
     const v = (byId.get(id)!.data as any)?.[fields.value];
     return typeof v === "number" || typeof v === "string" || typeof v === "boolean" ? v : null;
   };
-  for (const id of order) {
-    const badDep = dependsOn(id).find(d => errored.has(d));
-    if (badDep !== undefined) {
-      errors.push(`${id}: depends on failed cell ${badDep}`);
-      errored.add(id);
-      continue;
-    }
-    try {
-      computed.set(id, evaluateFormulaValue((byId.get(id)!.data as any)[fields.formula], look));
-    } catch (e: any) {
-      errors.push(`${id}: ${String(e?.message ?? e)}`);
-      errored.add(id);
-    }
+  const outcome = evaluateItems<FormulaValue>(
+    formulaCells.map(o => ({
+      id: o.id,
+      dependsOn: dependsOn(o.id),
+      compute: () => {
+        const v = evaluateFormulaValue((o.data as any)[fields.formula], look);
+        computed.set(o.id, v);
+        return v;
+      },
+    }))
+  );
+  const errors: string[] = [];
+  if (outcome.cycleLoop) {
+    errors.push(`[framework] derivation cycle detected: ${outcome.cycleLoop.join(" -> ")}`);
+  }
+  for (const id of outcome.order) {
+    const f = outcome.failed.get(id);
+    if (!f) continue;
+    if (f.kind === "dependency") errors.push(`${id}: depends on failed cell ${f.dep}`);
+    else if (f.kind === "error") errors.push(`${id}: ${f.message}`);
   }
   return {
     occupants: occupants.map(o =>
-      computed.has(o.id) ? { ...o, data: { ...(o.data as any), [fields.computed]: computed.get(o.id) } } : o
+      outcome.values.has(o.id) ? { ...o, data: { ...(o.data as any), [fields.computed]: outcome.values.get(o.id) } } : o
     ),
     errors,
   };

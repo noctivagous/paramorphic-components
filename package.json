@@ -35,7 +35,11 @@
     "dev:gui-builder": "vite --config apps/gui-builder/vite.config.ts --port 5177",
     "build:gui-builder": "vite build --config apps/gui-builder/vite.config.ts",
     "preview:gui-builder": "vite preview --config apps/gui-builder/vite.config.ts --port 4177",
-    "verify:gui": "esbuild scripts/verify-gui.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-gui.cjs --log-level=error && node /tmp/verify-gui.cjs"
+    "verify:gui": "esbuild scripts/verify-gui.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-gui.cjs --log-level=error && node /tmp/verify-gui.cjs",
+    "verify:relations": "esbuild scripts/verify-relations.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-relations.cjs --log-level=error && node /tmp/verify-relations.cjs",
+    "dev:supershape": "vite --config apps/supershape/vite.config.ts --port 5178",
+    "build:supershape": "vite build --config apps/supershape/vite.config.ts",
+    "preview:supershape": "vite preview --config apps/supershape/vite.config.ts --port 4178"
   },
   "dependencies": {
     "react": "^18.3.1",

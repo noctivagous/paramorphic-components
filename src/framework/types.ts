@@ -62,7 +62,7 @@ export type OutcomeCondition =
 export type Region = { id: string; cells: Pos[]; type: "row" | "col" | "box" | "edge" | "track" | "word" | "custom"; color?: string };
 
 export type Guest =
-  | { kind: "Path"; state: { points: { x: number; y: number }[] } }
+  | { kind: "Path"; state: { points: { x: number; y: number }[]; quarantine?: string } }
   | { kind: "Tree"; state: { rootId: string } }
   | { kind: "Grid"; state: { occupants: Occupant[]; width: number; height: number } }
   | { kind: "Logic"; state: { triples: LogicTriple[] } };

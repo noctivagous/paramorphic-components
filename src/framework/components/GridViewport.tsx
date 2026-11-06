@@ -748,9 +748,41 @@ export function GridViewport({
         <div className="mt-3 panel p-2">
           <div className="text-[9px] text-[var(--text-faint)]">GUEST INSIDE {selectedOcc.type} • {selectedOcc.guest.kind}</div>
           <div className="mt-1">
-            {selectedOcc.guest.kind === "Path" && (
-              <svg viewBox="0 0 100 20" className="w-full h-[30px]"><path d={`M0 10 Q20 0 40 10 T80 10`} fill="none" stroke="var(--accent)" strokeWidth={1.5} /></svg>
-            )}
+            {selectedOcc.guest.kind === "Path" && (() => {
+              // Real guest state (§8.4): the points a relation (or the plan)
+              // put there, drawn to their own bounds. A quarantined guest
+              // renders dimmed with its reason; a host data.marker point
+              // (e.g. a bezier.pointAt output) is drawn on the curve.
+              const pts = selectedOcc.guest.state.points ?? [];
+              const quarantine = selectedOcc.guest.state.quarantine;
+              const marker = (selectedOcc.data as any)?.marker as { x: number; y: number } | undefined;
+              if (pts.length === 0) {
+                return <div className="text-[10px] text-[var(--text-faint)]">{quarantine ? `quarantined: ${quarantine}` : "Path guest has no points yet."}</div>;
+              }
+              const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+              const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+              const W = 100, H = 56, PAD = 4;
+              const sx = (x: number) => PAD + ((x - minX) / Math.max(1e-9, maxX - minX)) * (W - 2 * PAD);
+              const sy = (y: number) => PAD + ((y - minY) / Math.max(1e-9, maxY - minY)) * (H - 2 * PAD);
+              const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x).toFixed(2)} ${sy(p.y).toFixed(2)}`).join(" ");
+              return (
+                <div>
+                  <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[90px]" style={quarantine ? { opacity: 0.35 } : undefined}>
+                    <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.5} />
+                    {pts.map((p, i) => (
+                      <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={i === 0 || i === pts.length - 1 ? 1.8 : 0.7} fill="var(--accent)" />
+                    ))}
+                    {marker && typeof marker.x === "number" && typeof marker.y === "number" && (
+                      <circle cx={sx(marker.x)} cy={sy(marker.y)} r={2.6} fill="#e8ff52" stroke="#12131a" strokeWidth={0.7} />
+                    )}
+                  </svg>
+                  <div className="text-[9px] text-[var(--text-faint)]">
+                    {pts.length} points{typeof (selectedOcc.data as any)?.length === "number" ? ` • length ${(selectedOcc.data as any).length.toFixed(2)}` : ""}
+                    {quarantine ? ` • quarantined: ${quarantine}` : ""}
+                  </div>
+                </div>
+              );
+            })()}
             {selectedOcc.guest.kind === "Grid" && <div className="grid grid-cols-3 gap-[2px]">{Array.from({length:6}).map((_,i)=><div key={i} className="h-3 bg-[var(--bg-4)] rounded-[2px]"></div>)}</div>}
             {selectedOcc.guest.kind === "Logic" && <div className="text-[10px]">{(selectedOcc.guest.state as any).triples?.map((t:LogicTriple)=><span key={t.id} className="px-1 py-0.5 bg-[var(--bg-4)] rounded mr-1">{t.s} {t.p} {t.o}</span>)}</div>}
             {selectedOcc.guest.kind === "Tree" && <div className="text-[10px]">Tree guest root:{(selectedOcc.guest.state as any).rootId}</div>}

@@ -5,6 +5,7 @@ import { validatePresentationConfig } from "./presentations";
 import { ruleSetsEqual, validateMoveRule, validateOutcome, validateTurns } from "./rule-sets";
 import { loadRuleChain } from "./rule-chains";
 import { cellsOf } from "./editing";
+import { validateRelationBindings, type RelationBinding } from "./relations";
 
 // ---------- Plan parsing & validation ----------
 export function parsePlan(text: string): { data: any; errors: string[]; format: "json" | "yaml" | "xml" } {
@@ -268,6 +269,12 @@ export type LoadedPlan = {
    */
   ruleBase?: RuleSet;
   ruleMorphs?: AppliedMorph[];
+  /**
+   * Relation bindings (§8.4), when the plan carries them: registry def ids
+   * wired to occupant entities. Validated at load; evaluation is the host's
+   * job (evaluatePlanRelations), outputs are derived and never stored.
+   */
+  relations?: RelationBinding[];
 };
 
 /** Compare a replayed state against the cached snapshot, order-insensitively. */
@@ -453,6 +460,14 @@ export function loadPlan(
   if (occupants) {
     for (const e of checkBoard(occupants, outWidth, outHeight)) errors.push(e);
   }
+  // Relation bindings validate against the final occupant set and the
+  // registered defs; any problem rejects the whole plan.
+  let relations: RelationBinding[] | undefined;
+  if (data.relations !== undefined) {
+    const occIds = new Set((occupants ?? []).map(o => o.id));
+    for (const e of validateRelationBindings(data.relations, occIds)) errors.push(e);
+    if (Array.isArray(data.relations)) relations = data.relations as RelationBinding[];
+  }
   if (errors.length > 0) return { ok: false, errors };
   return {
     ok: true,
@@ -478,6 +493,7 @@ export function loadPlan(
       morphs,
       ruleBase: ruleBaseOut,
       ruleMorphs: ruleMorphsOut,
+      relations,
     },
   };
 }
@@ -536,6 +552,8 @@ export type PlanApplyTarget = {
   setPlanErrors: (e: string[]) => void;
   setChainCaptureActive: (b: boolean) => void;
   markPlanLoad: () => void;
+  /** Optional: hosts that evaluate relations receive the plan's bindings. */
+  setRelations?: (r: RelationBinding[]) => void;
 };
 
 export function applyPlan(plan: LoadedPlan, target: PlanApplyTarget): void {
@@ -559,4 +577,5 @@ export function applyPlan(plan: LoadedPlan, target: PlanApplyTarget): void {
   target.setValidMoves([]);
   target.setPlanErrors([]);
   target.setChainCaptureActive(false);
+  target.setRelations?.(plan.relations ?? []);
 }

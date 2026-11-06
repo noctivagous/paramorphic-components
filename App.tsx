@@ -4,6 +4,7 @@ import {
   GridViewport,
   TILINGS_LIST,
   derivePresentedCells,
+  evaluatePlanRelations,
   applyPlan,
   commitCellText,
   errorIdsFor,
@@ -22,6 +23,7 @@ import type {
   LogicTriple,
   Occupant,
   Region,
+  RelationBinding,
   RuleSet,
   TilingDef,
   Toggles,
@@ -327,6 +329,13 @@ export default function App() {
   const [planFormat, setPlanFormat] = useState<string>("yaml");
   const [interpretation, setInterpretation] = useState<any>(null);
   const sheetDerived = useMemo(() => derivePresentedCells(occupants, interpretation?.grid), [occupants, interpretation]);
+  // Relations (§8.4): bindings arrive with the plan; outputs are derived on
+  // every render from the raw occupants, never stored back into state.
+  const [relations, setRelations] = useState<RelationBinding[]>([]);
+  const relationDerived = useMemo(
+    () => (relations.length > 0 ? evaluatePlanRelations(occupants, relations) : null),
+    [occupants, relations]
+  );
   const sheetErrorIds = useMemo(() => errorIdsFor(sheetDerived.errors), [sheetDerived]);
   const [configs, setConfigs] = useState<any[]>([]);
   const [saveName, setSaveName] = useState("");
@@ -352,6 +361,7 @@ export default function App() {
     setHeight(d.height);
     setOccupants(d.occupants);
     setRegions(d.regions);
+    setRelations([]);
     setInterpretation(null);
     setCurrentTurn((d.ruleSet.turns as any).first || (d.ruleSet.turns as any).order?.[0] || "white");
     setOutcome(null);
@@ -382,6 +392,7 @@ export default function App() {
     setValidMoves,
     setPlanErrors,
     setChainCaptureActive,
+    setRelations,
     markPlanLoad: () => { planLoadRef.current = true; },
   };
 
@@ -677,7 +688,7 @@ export default function App() {
               />
             ) : component === "Grid" && (
               <GridViewport
-                occupants={occupants}
+                occupants={relationDerived?.occupants ?? occupants}
                 setOccupants={setOccupants}
                 tiling={tiling}
                 ruleSet={ruleSet}
