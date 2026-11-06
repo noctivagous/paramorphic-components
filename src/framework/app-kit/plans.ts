@@ -175,5 +175,6 @@ appKit.register({ id: 'spreadsheet', label: 'Spreadsheet', description: 'Sidebar
     { id: 'about', do: 'dialog.open', target: 'about' },
   ], status: [
     { id: 'size', label: 'Size' }, { id: 'cells', label: 'Cells' }, { id: 'history', label: 'History' }, { id: 'errors', label: 'Errors' },
+    { id: 'sum', label: 'Sum' }, { id: 'avg', label: 'Avg' }, { id: 'count', label: 'Count' }, { id: 'min', label: 'Min' }, { id: 'max', label: 'Max' },
   ] }),
 });

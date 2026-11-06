@@ -20,19 +20,109 @@ export type CellPresentation = {
   formula?: string;
   /** Binding path for the derived result, e.g. "data.computed". */
   computed?: string;
+  /** Binding path for a CellStyle object, e.g. "data.style" (Slice B). */
+  style?: string;
+  /** Binding path for a NumberFormatKind string, e.g. "data.format". */
+  format?: string;
 };
+
+/** Per-cell presentation style, stored as occupant data via the style binding. */
+export type CellStyle = {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  align?: "left" | "center" | "right";
+  color?: string;
+  bg?: string;
+  wrap?: boolean;
+};
+
+export type NumberFormatKind = "plain" | "fixed2" | "currency" | "percent" | "date" | "int";
+
+export const NUMBER_FORMATS: NumberFormatKind[] = ["plain", "fixed2", "currency", "percent", "date", "int"];
 
 export type GridHeaders = {
   columns: "letters" | "none";
   rows: "numbers" | "none";
 };
 
+/** Frozen leading rows/columns: view state, not grid state. */
+export type GridFreeze = { rows?: number; cols?: number };
+
 export type GridPresentationConfig = {
   cell: CellPresentation;
   headers: GridHeaders;
   editing?: CellEditing;
   selection?: { mode: SelectionMode };
+  freeze?: GridFreeze;
+  /** Pixel width per column index; missing entries use the renderer default. */
+  columnWidths?: number[];
 };
+
+function groupedFixed(n: number, digits: number): string {
+  const fixed = Math.abs(n).toFixed(digits);
+  const [intPart, fracPart] = fixed.split(".");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (n < 0 ? "-" : "") + grouped + (fracPart ? `.${fracPart}` : "");
+}
+
+/**
+ * Pure display formatting (Slice B): a stored value -> the string a cell
+ * shows. Unknown formats and non-numeric values under a numeric format
+ * fall back to the plain string form, never throw.
+ */
+export function formatCellValue(value: unknown, format?: string): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  if (typeof value !== "number" || !Number.isFinite(value)) return String(value);
+  switch (format) {
+    case "fixed2":
+      return groupedFixed(value, 2);
+    case "int":
+      return groupedFixed(Math.round(value), 0);
+    case "currency": {
+      const body = groupedFixed(Math.abs(value), 2);
+      return value < 0 ? `-$${body}` : `$${body}`;
+    }
+    case "percent":
+      return `${groupedFixed(value * 100, 2)}%`;
+    case "date": {
+      const ms = Date.UTC(1899, 11, 30) + Math.round(value) * 86400000;
+      const d = new Date(ms);
+      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(d.getUTCDate()).padStart(2, "0");
+      return `${d.getUTCFullYear()}-${mm}-${dd}`;
+    }
+    case "plain":
+    case undefined:
+    default:
+      return String(value);
+  }
+}
+
+/** Read and sanitize the style binding off an occupant. Never throws. */
+export function resolveCellStyle(occ: Occupant | undefined, cell: CellPresentation | undefined): CellStyle | undefined {
+  if (!occ || !cell?.style) return undefined;
+  const raw = resolveBinding(occ, cell.style).value;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const r = raw as Record<string, unknown>;
+  const style: CellStyle = {};
+  if (typeof r.bold === "boolean") style.bold = r.bold;
+  if (typeof r.italic === "boolean") style.italic = r.italic;
+  if (typeof r.underline === "boolean") style.underline = r.underline;
+  if (r.align === "left" || r.align === "center" || r.align === "right") style.align = r.align;
+  if (typeof r.color === "string") style.color = r.color;
+  if (typeof r.bg === "string") style.bg = r.bg;
+  if (typeof r.wrap === "boolean") style.wrap = r.wrap;
+  return Object.keys(style).length > 0 ? style : undefined;
+}
+
+/** The NumberFormatKind named by an occupant's format binding, if valid. */
+export function resolveCellFormat(occ: Occupant | undefined, cell: CellPresentation | undefined): NumberFormatKind | undefined {
+  if (!occ || !cell?.format) return undefined;
+  const raw = resolveBinding(occ, cell.format).value;
+  return typeof raw === "string" && (NUMBER_FORMATS as string[]).includes(raw) ? (raw as NumberFormatKind) : undefined;
+}
 
 /** Policies can be combined independently; legacy modes remain loadable. */
 export type CellEditing =
@@ -88,15 +178,32 @@ export function validatePresentationConfig(cfg: unknown): string[] {
         `interpretation.grid.cell.kind "${String(cell.kind)}" unknown (available: ${PRESENTATION_KINDS.join(", ")})`
       );
     }
-    for (const key of ["value", "formula", "computed"] as const) {
+    for (const key of ["value", "formula", "computed", "style", "format"] as const) {
       const v = cell[key];
       if (v !== undefined && (typeof v !== "string" || !bindingField(v))) {
         errors.push(`interpretation.grid.cell.${key} must be a data.<field> path`);
       }
     }
     if (typeof cell.value !== "string") errors.push("interpretation.grid.cell.value is required");
-    const bindings = [cell.value, cell.formula, cell.computed].filter((v): v is string => typeof v === "string");
+    const bindings = [cell.value, cell.formula, cell.computed, cell.style, cell.format].filter((v): v is string => typeof v === "string");
     if (new Set(bindings).size !== bindings.length) errors.push("interpretation.grid.cell bindings must be distinct");
+  }
+  const freeze = (cfg as Record<string, unknown>).freeze;
+  if (freeze !== undefined) {
+    if (!isRecord(freeze)) errors.push("interpretation.grid.freeze must be an object");
+    else {
+      for (const key of Object.keys(freeze)) if (!["rows", "cols"].includes(key)) errors.push(`unknown freeze field "${key}"`);
+      for (const key of ["rows", "cols"] as const) {
+        const v = freeze[key];
+        if (v !== undefined && (!Number.isInteger(v) || (v as number) < 0)) errors.push(`interpretation.grid.freeze.${key} must be a non-negative integer`);
+      }
+    }
+  }
+  const columnWidths = (cfg as Record<string, unknown>).columnWidths;
+  if (columnWidths !== undefined) {
+    if (!Array.isArray(columnWidths) || columnWidths.some(v => typeof v !== "number" || !Number.isFinite(v) || v <= 0)) {
+      errors.push("interpretation.grid.columnWidths must be an array of positive numbers");
+    }
   }
   const editing = cfg.editing;
   if (cfg.selection !== undefined && (!isRecord(cfg.selection) || !['single', 'range', 'multiple'].includes(String(cfg.selection.mode)))) errors.push('interpretation.grid.selection.mode must be single, range, or multiple');

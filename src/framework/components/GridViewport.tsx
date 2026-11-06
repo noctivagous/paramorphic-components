@@ -4,7 +4,7 @@ import { addPosByDir, applyOffset, rotateSpan } from "../tilings";
 import { buildOccupancyMap, getOccupiedCells, isCellOccupied, occupantAtCell } from "../occupancy";
 import { makeId } from "../tilings";
 import { applyPromotion, applySurroundCapture, canActOn, endAction, evaluateOutcomes, getValidMoves, isAutoEnd, nextTurn, promotionOptions, promotionSymbol, ruleHasSurroundCapture } from "../engine";
-import { colName, editingPolicies, enterDestination, resolveBinding, type CellEditing, type CellPresentation, type GridHeaders } from "../presentations";
+import { colName, editingPolicies, enterDestination, formatCellValue, resolveBinding, resolveCellFormat, resolveCellStyle, type CellEditing, type CellPresentation, type CellStyle, type GridFreeze, type GridHeaders } from "../presentations";
 import { cellIsSelected, clampGridSelection, initialGridSelection, selectGridCell, selectedCellCount, type GridSelection, type SelectionMode } from "../grid-selection";
 
 export type KeySlot = { q: number; key: Occupant | null; covered: boolean };
@@ -48,6 +48,20 @@ export function mergedBox(
   };
 }
 
+/** Presentation style binding -> CSS for one cell (Slice B). */
+export function cellStyleToCss(style: CellStyle | undefined): React.CSSProperties {
+  if (!style) return {};
+  const css: React.CSSProperties = {};
+  if (style.bold) css.fontWeight = 700;
+  if (style.italic) css.fontStyle = "italic";
+  if (style.underline) css.textDecoration = "underline";
+  if (style.align) css.textAlign = style.align;
+  if (style.color) css.color = style.color;
+  if (style.bg) css.backgroundColor = style.bg;
+  if (style.wrap) css.whiteSpace = "normal";
+  return css;
+}
+
 export type GridViewportProps = {
   occupants: Occupant[];
   setOccupants: React.Dispatch<React.SetStateAction<Occupant[]>>;
@@ -74,6 +88,15 @@ export type GridViewportProps = {
   onCellFocus?: (q: number, r: number) => void;
   selectionMode?: SelectionMode;
   onSelectionChange?: (selection: GridSelection) => void;
+  /** Frozen leading rows/columns in a presentation table (view state). */
+  freeze?: GridFreeze;
+  /** Pixel width per column index in a presentation table. */
+  columnWidths?: number[];
+  /**
+   * Per-cell style override for presentation mode only (conditional
+   * formatting): returned CSS merges over the occupant's bound style.
+   */
+  styleForCell?: (occ: Occupant | undefined, shownValue: unknown) => React.CSSProperties | undefined;
   /** Help line under a presentation table. */
   presentationHint?: string;
   tiling: TilingDef;
@@ -121,7 +144,8 @@ export function GridViewport({
   occupants, setOccupants, tiling, ruleSet, width, height, toggles, selectedId, setSelectedId, validMoves, setValidMoves,
   currentTurn, setCurrentTurn, outcome, setOutcome, chainCaptureActive, setChainCaptureActive, logicTriples, showRegions, setShowRegions, showSpan, knightDemo, setKnightDemo,
   mergeSpans, stagger, chrome = true, onOccupantTap, onEmptyTap,
-  presentation, headers, editing, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint, onCellFocus, selectionMode, onSelectionChange
+  presentation, headers, editing, derivedOccupants, derivedErrorIds, derivedErrors, onCellCommit, presentationHint, onCellFocus, selectionMode, onSelectionChange,
+  freeze, columnWidths, styleForCell
 }: GridViewportProps) {
   const cellSize = tiling.shape === "square" ? 44 : 40;
   const [selection, setSelection] = useState<GridSelection>(initialGridSelection);
@@ -423,35 +447,69 @@ export function GridViewport({
     const errIds = new Set(derivedErrorIds ?? []);
     const showCols = (headers?.columns ?? "none") === "letters";
     const showRows = (headers?.rows ?? "none") === "numbers";
-    const cellText = (o: Occupant | undefined): { display: string; formula?: string; err: boolean } => {
+    const cellText = (o: Occupant | undefined): { display: string; formula?: string; err: boolean; raw: unknown } => {
       if (presentation.kind === "eventCard") {
-        return { display: String(resolveBinding(o, presentation.value).value ?? ""), err: !!o && errIds.has(o.id) };
+        const raw = resolveBinding(o, presentation.value).value;
+        return { display: String(raw ?? ""), err: !!o && errIds.has(o.id), raw };
       }
       const formula = expressions === "formula" && presentation.formula
         ? (resolveBinding(o, presentation.formula).value as string | undefined)
         : undefined;
+      const format = resolveCellFormat(o, presentation);
       if (formula) {
         const err = !!o && errIds.has(o.id);
-        if (err) return { display: formula, formula, err };
+        if (err) return { display: formula, formula, err, raw: undefined };
         const computed = resolveBinding(o, presentation.computed).value;
-        return { display: String(computed ?? ""), formula, err };
+        return { display: format ? formatCellValue(computed, format) : String(computed ?? ""), formula, err, raw: computed };
       }
+      const raw = resolveBinding(o, presentation.value).value;
       return {
-        display: String(resolveBinding(o, presentation.value).value ?? ""),
+        display: format ? formatCellValue(raw, format) : String(raw ?? ""),
         err: !!o && errIds.has(o.id),
+        raw,
       };
     };
     const cols = Array.from({ length: width }, (_, q) => q);
     const rows = Array.from({ length: height }, (_, r) => r);
+    // Freeze panes (Slice B): sticky positioning inside the table. Header
+    // row height and row-header width are the rendered sizes below
+    // (py-1 + 9px text ≈ 25px; w-8 + padding ≈ 36px).
+    const freezeRows = Math.max(0, Math.min(freeze?.rows ?? 0, height));
+    const freezeCols = Math.max(0, Math.min(freeze?.cols ?? 0, width));
+    const headerH = showCols ? 25 : 0;
+    const rowHeaderW = showRows ? 36 : 0;
+    const colW = (q: number) => columnWidths?.[q] ?? 96;
+    const freezeStyleFor = (q: number, r: number): React.CSSProperties => {
+      const css: React.CSSProperties = {};
+      if (r < freezeRows) {
+        css.position = "sticky";
+        css.top = headerH + r * 25;
+        css.zIndex = 2;
+      }
+      if (q < freezeCols) {
+        css.position = "sticky";
+        let left = rowHeaderW;
+        for (let i = 0; i < q; i++) left += colW(i);
+        css.left = left;
+        css.zIndex = r < freezeRows ? 3 : 2;
+      }
+      return css;
+    };
     return (
       <div>
         <table ref={tableRef} className="border-collapse" role={selectionMode ? "grid" : undefined} aria-label={selectionMode ? "Cell grid" : undefined}>
+          <colgroup>
+            {showRows && <col style={{ width: rowHeaderW }} />}
+            {cols.map(q => (
+              <col key={q} style={{ width: colW(q) }} />
+            ))}
+          </colgroup>
           {showCols && (
             <thead>
               <tr>
-                {showRows && <th className="w-8 px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal" />}
+                {showRows && <th className="w-8 px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal" style={{ position: "sticky", top: 0, left: 0, zIndex: 4, backgroundColor: "var(--bg-2)" }} />}
                 {cols.map(q => (
-                  <th key={q} className="px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal text-center min-w-[72px]">
+                  <th key={q} className="px-1 py-1 text-[9px] text-[var(--text-faint)] font-normal text-center min-w-[72px]" style={{ ...(q < freezeCols ? freezeStyleFor(q, -1) : {}), position: "sticky", top: 0, zIndex: 3, backgroundColor: "var(--bg-2)" }}>
                     {colName(q)}
                   </th>
                 ))}
@@ -461,15 +519,23 @@ export function GridViewport({
           <tbody>
             {rows.map(r => (
               <tr key={r}>
-                {showRows && <td className="px-1 py-1 text-[9px] text-[var(--text-faint)] text-right">{r + 1}</td>}
+                {showRows && <td className="px-1 py-1 text-[9px] text-[var(--text-faint)] text-right" style={r < freezeRows ? { position: "sticky", top: headerH + r * 25, zIndex: 2, backgroundColor: "var(--bg-2)" } : undefined}>{r + 1}</td>}
                 {cols.map(q => {
                   const o = byKey.get(`${q},${r}`);
-                  const { display, formula, err } = cellText(o);
+                  const { display, formula, err, raw } = cellText(o);
+                  const frozen = q < freezeCols || r < freezeRows;
+                  const cellCss: React.CSSProperties = {
+                    ...cellStyleToCss(resolveCellStyle(o, presentation)),
+                    ...(styleForCell ? styleForCell(o, raw) : undefined),
+                    ...freezeStyleFor(q, r),
+                    ...(frozen ? { backgroundColor: (styleForCell?.(o, raw)?.backgroundColor as string) ?? resolveCellStyle(o, presentation)?.bg ?? "var(--bg-3)" } : {}),
+                  };
                   if (presentation.kind !== "editableText" || !onCellCommit) {
                     return (
-                      <td key={q} className="p-0 border border-[var(--border)]">
+                      <td key={q} className="p-0 border border-[var(--border)]" style={cellCss}>
                         <div
                           title={formula ? `${colName(q)}${r + 1}: ${formula}` : `${colName(q)}${r + 1}`}
+                          style={cellCss}
                           className={`px-1 py-1 text-[11px] ${presentation.kind === "eventCard" ? "rounded-[6px] bg-[var(--bg-3)]" : ""} ${
                             formula ? "text-[var(--accent)]" : "text-[var(--text)]"
                           } ${err ? "text-[#ff8a6b]" : ""}`}
@@ -481,7 +547,7 @@ export function GridViewport({
                   }
                   const selected = !!selectionMode && cellIsSelected(selection, { q, r });
                   return (
-                    <td key={q} role={selectionMode ? "gridcell" : undefined} aria-selected={selectionMode ? selected : undefined} className="p-0 border border-[var(--border)]" style={selected ? { boxShadow: 'inset 0 0 0 2px var(--accent)' } : undefined}>
+                    <td key={q} role={selectionMode ? "gridcell" : undefined} aria-selected={selectionMode ? selected : undefined} className="p-0 border border-[var(--border)]" style={{ ...cellCss, ...(selected ? { boxShadow: 'inset 0 0 0 2px var(--accent)' } : {}) }}>
                       <input
                         key={`${o?.id ?? `empty-${q}-${r}`}:${String(display)}`}
                         data-grid-q={q}
@@ -534,6 +600,7 @@ export function GridViewport({
                           }
                         }}
                         title={formula ? `${colName(q)}${r + 1}: ${formula}` : `${colName(q)}${r + 1}`}
+                        style={cellCss}
                         className={`w-full px-1 py-1 ${selected ? 'bg-[rgba(232,255,82,0.14)]' : 'bg-[var(--bg-3)]'} text-[11px] outline-none focus:bg-[var(--bg-4)] ${
                           formula ? "text-[var(--accent)]" : "text-[var(--text)]"
                         } ${err ? "text-[#ff8a6b]" : ""}`}

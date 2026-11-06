@@ -30,7 +30,8 @@
     "verify:rules": "esbuild scripts/verify-rules.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-rules.cjs --log-level=error && node /tmp/verify-rules.cjs",
     "verify:games": "esbuild scripts/verify-games.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-games.cjs --log-level=error && node /tmp/verify-games.cjs",
     "gen:plans": "esbuild scripts/generate-game-plans.ts --bundle --platform=node --format=cjs --outfile=/tmp/generate-game-plans.cjs --log-level=error && node /tmp/generate-game-plans.cjs",
-    "verify:selection": "esbuild scripts/verify-selection.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-selection.cjs --log-level=error && node /tmp/verify-selection.cjs"
+    "verify:selection": "esbuild scripts/verify-selection.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-selection.cjs --log-level=error && node /tmp/verify-selection.cjs",
+    "verify:sheet": "esbuild scripts/verify-sheet-ops.ts --bundle --platform=node --format=cjs --outfile=/tmp/verify-sheet-ops.cjs --log-level=error && node /tmp/verify-sheet-ops.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",

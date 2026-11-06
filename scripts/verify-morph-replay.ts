@@ -54,7 +54,7 @@ function check(name: string, cond: boolean, detail = ""): void {
 }
 
 const files = [
-  { path: "apps/spreadsheet/morph-plans/spreadsheet.json", morphs: 11, occupants: 11 },
+  { path: "apps/spreadsheet/morph-plans/spreadsheet.json", morphs: 14, occupants: 14 },
   { path: "morph-plans/sequencer.json", morphs: 3, occupants: 3 },
   { path: "morph-plans/chat.json", morphs: 5, occupants: 5 },
 ];
@@ -160,7 +160,7 @@ for (const f of files) {
   check("snapshot-only plan loads", res.ok, res.ok ? "" : res.errors.join("; "));
   if (res.ok) {
     check("snapshot-only chain is empty", res.plan.morphs.length === 0);
-    check("snapshot-only base is the snapshot", res.plan.base.occupants.length === 11);
+    check("snapshot-only base is the snapshot", res.plan.base.occupants.length === 14);
   }
 }
 
@@ -302,13 +302,13 @@ for (const f of files) {
   } else {
     const full = chainForSave(first.plan.base, first.plan.morphs, first.plan.occupants ?? [],
       first.plan.width, first.plan.height);
-    check("complete chain saves whole", full.ok && !full.checkpointed && full.morphs.length === 11);
+    check("complete chain saves whole", full.ok && !full.checkpointed && full.morphs.length === 14);
     // Simulate a truncated history: drop the first step but keep the cache.
     const partial = chainForSave(first.plan.base, first.plan.morphs.slice(1), first.plan.occupants ?? [],
       first.plan.width, first.plan.height);
     check("partial chain checkpoints", partial.ok && partial.checkpointed && partial.morphs.length === 0);
     if (partial.ok) {
-      check("checkpoint base is current state", partial.base.occupants.length === 11);
+      check("checkpoint base is current state", partial.base.occupants.length === 14);
       const reload = loadPlan({
         data: { ...data, base: partial.base, morphs: partial.morphs, occupants: partial.base.occupants },
         errors: [],
@@ -914,7 +914,7 @@ for (const f of files) {
       adopted: sfirst.plan.morphs,
       past: [],
     });
-    check("shared save publishes whole chain", saved.ok && !saved.checkpointed && saved.plan.morphs.length === 11);
+    check("shared save publishes whole chain", saved.ok && !saved.checkpointed && saved.plan.morphs.length === 14);
   }
 }
 
