@@ -9,6 +9,7 @@ import tictactoe from "./tictactoe.json";
 import checkers from "./checkers.json";
 import chess8 from "./chess8.json";
 import painter from "./painter.json";
+import bezier from "./bezier.json";
 
 export type StoredPlan = { name: string; label: string; data: any };
 
@@ -20,6 +21,7 @@ export const STORED_PLANS: StoredPlan[] = [
   { name: "checkers", label: "Checkers — dark leaps, chain capture, promotion", data: checkers },
   { name: "chess8", label: "Chess 8x8 — simplified rules, promotion choice", data: chess8 },
   { name: "painter", label: "Painter — free placement toggle grid", data: painter },
+  { name: "bezier", label: "Bézier — relation-driven Path guest, draggable handles", data: bezier },
 ];
 
 export function getStoredPlan(name: string): any | null {

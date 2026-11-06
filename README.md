@@ -531,6 +531,18 @@ The host and guest contract is defined once on the common component interface (s
 
 A playhead is a cursor over an ordered cell list, not a transport. The framework walks a substrate (`linePath`, `createCursor`, `advanceCursor` in `src/framework/traversal.ts`) and reports which occupants the entered cells hit (`collectTriggers`); time itself lives outside, supplied by whatever ticks the cursor — an interval in a demo, a hardware transport on an instrument. The same operator serves sequencer steps, timeline rulers and path animation. Turning a hit into sound, light or motion is a platform adapter's job (layer 5), driven by plan data such as a pitch mapping — never by core code.
 
+### 8.4 Relations
+
+A Relation is a named function from input ports to output ports, bound to entities in a plan. Evaluating it keeps the outputs consistent with the inputs. The registry holds the definition (`bezier.cubic`, `supershape.polar`) with its typed ports — name, type, range, default, step, units; the plan holds a binding that wires those ports to entities (`ctl.m`, a guest's points, a cell's computed value). A plan names a definition only: no code lives in plans, and a binding's function is always a registered definition or, later, a small validated expression supplied by one.
+
+Relation is a mechanism on the Graph kernel, not a seventh component — the same call §7 and §8.3 made for Timeline and traversal. It generalises derivation instead of sitting beside it: `derivation.ts` already separates mechanism (topological ordering, cycle detection) from the expression languages that supply callbacks, and a Relation is that mechanism with named ports and plan-level bindings. Spreadsheet formulas are the first conformance case: a cell is a variable, its formula is a relation whose ports are the formula's references, and recalculation is relation evaluation with the sheet's outputs unchanged.
+
+Evaluation is forward-only. A definition computes outputs from inputs; nothing solves backwards, and the first case that wants a two-way constraint (one bézier handle mirroring another) will declare which side drives rather than growing a solver. Live bindings recompute only their dependents when an input changes. Failure is quarantine, copied from formulas: a domain violation (a supershape with `n1 ≤ 0`, a division by zero) or a cycle across bindings quarantines that binding's outputs and their dependents, marked with the reason, while the rest of the plan stays live — the relation form of `#CYCLE!`.
+
+Hosts respect scrub versus commit. Dragging a slider or a handle fires continuously, so the in-between values are session state and relations evaluate against that overlay to keep previews live; one morph is recorded on release, as with unrecorded cursor seeks. Undo never fills with frames.
+
+On Path: there is no second meaning to reconcile. §6.4 defines Path's substrate as points and connected segments, with interpretation keeping data separate from use — bézier shape, map route, motion trajectory, wire, signal curve. A bézier relation's sampled points are a Path guest's state under the bézier interpretation; riding the curve is sampling it to an ordered list and walking it with the §8.3 cursor. The Graph kernel's Path is this same component seen from the substrate side (nodes and edges), not a rival. Nor is a Relation a Logic triple: triples are data inside the Logic component, while a Relation is a live function between entities — though a Logic rule may one day be expressed as a binding.
+
 ## 9. The morph plan format
 
 The sources call for a concise declarative language and a runtime that can replay a plan. A morph plan is an ordered list of named morphs applied to a component. Illustrative sketch only, not final syntax:
