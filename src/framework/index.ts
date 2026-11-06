@@ -18,6 +18,7 @@ export * from "./grid-selection";
 export * from "./morphs/sheet-ops";
 export * from "./derivation";
 export * from "./relations";
+export * from "./export";
 export * from "./morphs/formulas";
 export * from "./morphs/relation-defs";
 export * from "./morphs/framing";

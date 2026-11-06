@@ -543,6 +543,16 @@ Hosts respect scrub versus commit. Dragging a slider or a handle fires continuou
 
 On Path: there is no second meaning to reconcile. §6.4 defines Path's substrate as points and connected segments, with interpretation keeping data separate from use — bézier shape, map route, motion trajectory, wire, signal curve. A bézier relation's sampled points are a Path guest's state under the bézier interpretation; riding the curve is sampling it to an ordered list and walking it with the §8.3 cursor. The Graph kernel's Path is this same component seen from the substrate side (nodes and edges), not a rival. Nor is a Relation a Logic triple: triples are data inside the Logic component, while a Relation is a live function between entities — though a Logic rule may one day be expressed as a binding.
 
+### 8.5 Export
+
+Export is the second presentation of a plan. A runtime presents state as behaviour; an exporter presents the same inspectable plan as ordinary source code. The target is a standalone Vite, React and TypeScript project that can be read, edited and built without importing Paramorphic Components. That independence is not a promise in prose: the exporter’s gate compiles and builds the result with no framework alias or path available, and rejects output that names the framework.
+
+Emitted helpers are source owned by the recipient, not a runtime library carried under another name. Files say what generated them once, and individual statements retain trace comments to the plan, node, morph or binding identifiers they came from. Names come from those identifiers rather than an exporter’s counter, so the resulting code remains navigable back to the design it was made from. A relation binding, whose dependency order is fixed by the plan, becomes straight-line code in that order; no relation engine survives into the export.
+
+An exporter covers only what it can name. Every emitted, copied or template-derived piece is recorded in a manifest, and every unsupported control, morph, definition or presentation feature is reported by name and marks the export partial. Silence would turn a missing emitter into a false claim, so diagnostics follow the same rule as replayable saves: publish the complete thing, publish a clearly marked checkpoint, but never confuse the two.
+
+Export is also a fork. Once exported, the code belongs to its new project and may diverge freely; there is no round trip that imports edited code back into a plan. That one-way boundary is permanent, not a deferred import feature.
+
 ## 9. The morph plan format
 
 The sources call for a concise declarative language and a runtime that can replay a plan. A morph plan is an ordered list of named morphs applied to a component. Illustrative sketch only, not final syntax:
