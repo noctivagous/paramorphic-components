@@ -1,0 +1,99 @@
+/* App-kit control theme. Tokens reconcile the GUI sources' shared pro theme
+   (base #121214, panel gradient #2d2e30 -> #1e1f21, well #0f0f10, accent
+   #4a8af4) with the repo shell variables (--bg-3, --border, --text) so
+   controls sit naturally inside AppShell apps. Apps that render controls
+   import this file once. */
+.gui-root, .gui-node {
+  --gui-base: #121214;
+  --gui-panel-top: #2d2e30;
+  --gui-panel-btm: #1e1f21;
+  --gui-well: #0f0f10;
+  --gui-line: var(--border, #2a2c2f);
+  --gui-text: var(--text, #d6d6d6);
+  --gui-dim: var(--text-dim, #7a7c7e);
+  --gui-accent: #4a8af4;
+  --gui-tone: var(--gui-accent);
+  color: var(--gui-text);
+  font-size: 11px;
+}
+.gui-ctl { display: flex; flex-direction: column; gap: 4px; width: 100%; height: 100%; min-width: 0; }
+.gui-ctl-center { align-items: center; justify-content: center; }
+.gui-ctl-label { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gui-dim); white-space: nowrap; overflow: hidden; }
+.gui-btn { width: 100%; height: 100%; background: linear-gradient(180deg, var(--gui-panel-top), var(--gui-panel-btm)); border: 1px solid #0a0a0b; border-top-color: rgba(255,255,255,0.18); color: var(--gui-text); cursor: pointer; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.gui-btn:active { filter: brightness(1.25); }
+.gui-btn-blue { background: linear-gradient(180deg, #3f6fb8, #274a80); }
+.gui-btn-danger { background: linear-gradient(180deg, #a03a30, #6e2620); }
+.gui-icon-btn { display: flex; align-items: center; justify-content: center; }
+.gui-segmented { display: flex; width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; padding: 2px; gap: 2px; }
+.gui-segmented button { flex: 1; background: transparent; border: none; color: var(--gui-dim); cursor: pointer; border-radius: 4px; font-size: 10px; min-width: 0; overflow: hidden; }
+.gui-segmented button.gui-seg-on { background: linear-gradient(180deg, #4a4c4f, #2a2c2f); color: var(--gui-text); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15); }
+.gui-strip { position: relative; flex: 1; min-height: 10px; background: var(--gui-well); border: 1px solid #000; border-radius: 5px; overflow: hidden; cursor: pointer; }
+.gui-strip-v { width: 18px; min-height: 40px; margin: 0 auto; }
+.gui-strip-fill { position: absolute; left: 0; bottom: 0; background: linear-gradient(90deg, #2c5aa8, var(--gui-tone)); }
+.gui-strip-v .gui-strip-fill { width: 100%; background: linear-gradient(0deg, #2c5aa8, var(--gui-tone)); }
+.gui-knob-body { fill: #26282c; stroke: #0a0a0b; }
+.gui-knob-tick { stroke: #55585c; stroke-width: 1; }
+.gui-knob-pointer { stroke: var(--gui-accent); stroke-width: 2.4; stroke-linecap: round; }
+.gui-toggle { width: 54px; height: 28px; border-radius: 999px; background: var(--gui-well); border: 1px solid #000; position: relative; cursor: pointer; padding: 0; }
+.gui-toggle span { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(180deg, #4a4c4f, #2a2c2f); transition: left 0.12s; }
+.gui-toggle-on { background: #274a80; }
+.gui-toggle-on span { left: 28px; }
+.gui-text-label { display: flex; align-items: center; width: 100%; height: 100%; white-space: nowrap; overflow: hidden; }
+.gui-input { width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #000; border-radius: 5px; color: var(--gui-text); padding: 0 8px; font-size: 11px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.8); }
+.gui-textarea { padding: 6px 8px; resize: none; }
+.gui-check { display: flex; align-items: center; gap: 6px; cursor: pointer; height: 100%; }
+.gui-panel { width: 100%; height: 100%; background: linear-gradient(180deg, var(--gui-panel-top), var(--gui-panel-btm)); border: 1px solid #0a0a0b; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+.gui-panel-title { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gui-dim); padding: 5px 8px; }
+.gui-container-mark { outline: 1px dashed rgba(74,138,244,0.35); outline-offset: -6px; }
+.gui-toolbar-strip { width: 100%; height: 100%; display: flex; align-items: center; padding: 0 10px; background: linear-gradient(180deg, #3a3b3e, #2a2b2e); border-bottom: 1px solid #0a0a0a; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gui-dim); }
+.gui-listbox { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; overflow: auto; }
+.gui-listbox-title { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gui-dim); padding: 5px 8px 2px; }
+.gui-listrow { text-align: left; background: transparent; border: none; color: var(--gui-text); padding: 4px 8px; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.gui-listrow-on { background: #24365a; color: #b8d0ff; }
+.gui-image-well { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: var(--gui-well); border: 1px dashed #333; border-radius: 6px; color: #5a5c5e; font-size: 10px; }
+.gui-separator { width: 100%; height: 100%; min-height: 2px; background: #3a3b3e; align-self: center; }
+.gui-dual { display: flex; flex-direction: column; gap: 2px; }
+.gui-dual input { width: 100%; accent-color: var(--gui-accent); height: 12px; }
+.gui-faderbank { display: flex; gap: 8px; width: 100%; height: 100%; justify-content: space-around; }
+.gui-fader { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: var(--gui-dim); height: 100%; }
+.gui-xypad { position: relative; width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; cursor: crosshair; overflow: hidden; }
+.gui-xy-dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--gui-accent); transform: translate(-50%, 50%); box-shadow: 0 0 8px var(--gui-accent); }
+.gui-scrub { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; cursor: ew-resize; color: var(--gui-dim); }
+.gui-scrub b { color: var(--gui-text); }
+.gui-ledwrap { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--gui-dim); cursor: pointer; width: 100%; height: 100%; justify-content: center; font-size: 9px; }
+.gui-led { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #000; }
+.gui-drumpad { width: 100%; height: 100%; background: linear-gradient(180deg, #34363a, #1d1e20); border: 1px solid #000; border-radius: 8px; color: var(--gui-dim); cursor: pointer; font-size: 10px; }
+.gui-drumpad:active { background: #24365a; color: #b8d0ff; }
+.gui-rocker { width: 100%; height: 100%; background: linear-gradient(180deg, #34363a, #1d1e20); border: 1px solid #000; border-radius: 6px; color: var(--gui-dim); cursor: pointer; }
+.gui-rocker-on { color: var(--gui-accent); }
+.gui-radio { display: flex; flex-direction: column; gap: 4px; width: 100%; height: 100%; overflow: auto; }
+.gui-togglegrid { display: grid; gap: 3px; width: 100%; height: 100%; }
+.gui-togglegrid button { background: #1b1c1e; border: 1px solid #000; border-radius: 3px; cursor: pointer; min-height: 10px; }
+.gui-togglegrid button.gui-cell-on { background: var(--gui-accent); box-shadow: 0 0 6px rgba(74,138,244,0.6); }
+.gui-matrixbtns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; width: 100%; height: 100%; }
+.gui-matrixbtns button { background: linear-gradient(180deg, #34363a, #1d1e20); border: 1px solid #000; border-radius: 4px; color: var(--gui-dim); cursor: pointer; font-size: 10px; }
+.gui-matrixbtns button.gui-seg-on { background: #24365a; color: #b8d0ff; }
+.gui-steps { display: flex; gap: 3px; width: 100%; height: 100%; }
+.gui-steps button { flex: 1; background: #1b1c1e; border: 1px solid #000; border-radius: 3px; cursor: pointer; }
+.gui-steps button.gui-step-on { background: var(--gui-accent); }
+.gui-piano { display: flex; width: 100%; height: 100%; gap: 1px; }
+.gui-key { flex: 1; background: linear-gradient(180deg, #e8e8e8, #c9c9c9); border: 1px solid #888; border-radius: 0 0 3px 3px; cursor: pointer; }
+.gui-key-on { background: var(--gui-accent) !important; }
+.gui-curve { width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; }
+.gui-curve-line { stroke: var(--gui-accent); stroke-width: 1.6; }
+.gui-curve-dot { fill: #b8d0ff; }
+.gui-meter { display: flex; gap: 2px; width: 100%; height: 100%; align-items: stretch; }
+.gui-meter span { flex: 1; background: #1b1c1e; border-radius: 1px; }
+.gui-meter span.gui-seg-lit { background: #3dd68c; }
+.gui-meter span.gui-seg-hot { background: #ff4a3d; }
+.gui-meter-v { flex-direction: column; }
+.gui-wave { position: relative; display: flex; align-items: center; gap: 1px; width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #000; border-radius: 6px; padding: 4px; cursor: pointer; overflow: hidden; }
+.gui-wave span { flex: 1; background: #3a3d41; min-height: 2px; }
+.gui-wave span.gui-wave-on { background: var(--gui-accent); }
+.gui-wave-head { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.7; }
+/* Inspector */
+.gui-inspector { display: flex; flex-direction: column; gap: 8px; font-size: 11px; }
+.gui-inspector label { display: flex; flex-direction: column; gap: 3px; color: var(--gui-dim, #7a7c7e); font-size: 10px; }
+.gui-inspector input[type="text"], .gui-inspector input[type="number"], .gui-inspector select, .gui-inspector textarea { background: var(--bg-3, #1a1d21); border: 1px solid var(--border, #2a2c2f); border-radius: 6px; color: var(--text, #e6e8eb); padding: 4px 6px; font-size: 11px; }
+.gui-inspector input[type="range"] { accent-color: var(--gui-accent, #4a8af4); }
+.gui-inspector input[type="color"] { width: 100%; height: 26px; background: none; border: 1px solid var(--border, #2a2c2f); border-radius: 6px; }
