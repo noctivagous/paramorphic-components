@@ -394,6 +394,50 @@
         "formula": "=E1+1"
       },
       "tags": []
+    },
+    {
+      "id": "c-3-0",
+      "anchor": {
+        "q": 3,
+        "r": 0
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "value": 1234.5,
+        "format": "currency",
+        "style": {
+          "bold": true
+        }
+      },
+      "tags": []
+    },
+    {
+      "id": "c-3-1",
+      "anchor": {
+        "q": 3,
+        "r": 1
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=IF(A1>B1, ROUND(A1/B1, 2), 0)",
+        "format": "fixed2"
+      },
+      "tags": []
+    },
+    {
+      "id": "c-3-2",
+      "anchor": {
+        "q": 3,
+        "r": 2
+      },
+      "span": [],
+      "type": "cell",
+      "data": {
+        "formula": "=A1&\" units\""
+      },
+      "tags": []
     }
   ],
   "regions": [
@@ -621,17 +665,30 @@
   "interpretation": {
     "view": "spreadsheet",
     "grid": {
-      "editing": { "parse": "numberOrText", "expressions": "formula", "clear": "occupant", "enter": "down" },
-      "selection": { "mode": "range" },
+      "editing": {
+        "parse": "numberOrText",
+        "expressions": "formula",
+        "clear": "occupant",
+        "enter": "down"
+      },
+      "selection": {
+        "mode": "range"
+      },
       "cell": {
         "kind": "editableText",
         "value": "data.value",
         "formula": "data.formula",
-        "computed": "data.computed"
+        "computed": "data.computed",
+        "style": "data.style",
+        "format": "data.format"
       },
       "headers": {
         "columns": "letters",
         "rows": "numbers"
+      },
+      "freeze": {
+        "rows": 1,
+        "cols": 0
       }
     }
   },
@@ -870,6 +927,65 @@
       },
       "inverse": {
         "prev": null
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-3-0",
+          "anchor": {
+            "q": 3,
+            "r": 0
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "value": 1234.5,
+            "format": "currency",
+            "style": {
+              "bold": true
+            }
+          },
+          "tags": []
+        }
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-3-1",
+          "anchor": {
+            "q": 3,
+            "r": 1
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=IF(A1>B1, ROUND(A1/B1, 2), 0)",
+            "format": "fixed2"
+          },
+          "tags": []
+        }
+      }
+    },
+    {
+      "name": "sheet.setCell",
+      "params": {
+        "occ": {
+          "id": "c-3-2",
+          "anchor": {
+            "q": 3,
+            "r": 2
+          },
+          "span": [],
+          "type": "cell",
+          "data": {
+            "formula": "=A1&\" units\""
+          },
+          "tags": []
+        }
       }
     }
   ]

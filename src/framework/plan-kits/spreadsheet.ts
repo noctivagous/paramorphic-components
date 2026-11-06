@@ -53,10 +53,11 @@ export const spreadsheetRecipe: PlanRecipe<SpreadsheetRecipeParams> = {
       ruleSet: { id: "spreadsheet", setup: { width, height, description: "Editable grid" }, moves: [], turns: { type: "free", order: [], first: "sheet" }, outcomes: [], end: { condition: "none", action: "none" }, regions: [] },
       regions: [], occupants,
       interpretation: { view: "spreadsheet", grid: {
-        cell: { kind: "editableText", value: "data.value", ...(formulas ? { formula: "data.formula", computed: "data.computed" } : {}) },
+        cell: { kind: "editableText", value: "data.value", ...(formulas ? { formula: "data.formula", computed: "data.computed" } : {}), style: "data.style", format: "data.format" },
         editing: { parse: "numberOrText", expressions: formulas ? "formula" : "none", clear: "occupant", enter: "down" },
         selection: { mode: "range" },
         headers: { columns: "letters", rows: "numbers" },
+        freeze: { rows: 1, cols: 0 },
       } },
       base: { occupants: [], width, height },
       morphs: occupants.map(occ => ({ name: "sheet.setCell", params: { occ } })),
