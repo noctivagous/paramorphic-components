@@ -1,52 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Classic desktop theme (late-2000s desktop application look).
+   Light window face, near-black text, white sunken fields, beveled buttons,
+   navy selection. Values live in the variables below; chrome and apps
+   consume the variables. See refs/theme-plan.md for the design that turns
+   this hard-coded sheet into a theme plan (slices T1-T3). */
 :root {
-  --bg: #0e0f11;
-  --bg-2: #14161a;
-  --bg-3: #1a1d21;
-  --bg-4: #22262e;
-  --border: #24282f;
-  --border-2: #2e343d;
-  --text: #e6e8eb;
-  --text-dim: #8a909c;
-  --text-faint: #50565f;
-  --accent: #e8ff52;
-  --accent-2: #d6ed3a;
-  --accent-dim: rgba(232,255,82,0.15);
-  --accent-glow: rgba(232,255,82,0.45);
-  --danger: #ff5a3c;
-  --lime-bg: #1e2115;
-  --mono: "JetBrains Mono", monospace;
-  --serif: "Instrument Serif", serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0e0f11;
-  }
+  --bg: #ece9d8;          /* window face */
+  --bg-2: #f4f1e6;        /* panel face, lighter */
+  --bg-3: #ece9d8;        /* button face */
+  --bg-4: #dcd7c0;        /* hover / focused surface */
+  --border: #9c988a;      /* panel and grid lines */
+  --border-2: #716f64;    /* strong edge / bevel shadow */
+  --text: #1a1a1a;
+  --text-dim: #3f3d35;    /* strong on the face colour — no faint greys */
+  --text-faint: #5c594e;  /* still ~5.9:1 on --bg */
+  --accent: #316ac5;      /* classic selection navy */
+  --accent-2: #245a9e;
+  --accent-dim: rgba(49, 106, 197, 0.16);
+  --accent-glow: rgba(49, 106, 197, 0.35);
+  --danger: #b3271e;
+  --lime-bg: #fbf3cf;     /* notice surface (pale yellow) */
+  --sans: Tahoma, "Segoe UI", "Lucida Grande", "Lucida Sans Unicode", Helvetica, Arial, sans-serif;
+  --mono: Consolas, "Lucida Console", "Courier New", monospace;
+  --serif: Georgia, "Times New Roman", serif;
 }
 
 * { font-variant-ligatures: none; }
 body {
-  margin:0;
+  margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.4;
-  -webkit-font-smoothing: antialiased;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
   overflow-x: clip;
 }
-::-webkit-scrollbar { width:6px; height:6px; }
-::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
+::selection { background: var(--accent); color: #fff; }
+::-webkit-scrollbar { width: 16px; height: 16px; }
+::-webkit-scrollbar-thumb { background: var(--bg-3); border: 1px solid var(--border-2); border-radius: 0; }
+::-webkit-scrollbar-track { background: #f1efe4; }
+::-webkit-scrollbar-button { background: var(--bg-3); border: 1px solid var(--border-2); }
 
 /* utility */
-.panel { background: var(--bg-2); border:1px solid var(--border); border-radius:12px; }
-.panel-ghost { background: linear-gradient(180deg, var(--bg-2), var(--bg)); border:1px solid var(--border); border-radius:12px; }
-.accent-ring { box-shadow: 0 0 0 1px var(--accent), 0 0 20px var(--accent-dim); }
-.lime-dot { width:6px; height:6px; border-radius:50%; background: var(--accent); box-shadow:0 0 8px var(--accent-glow); display:inline-block; }
+.panel { background: var(--bg-2); border: 1px solid var(--border-2); border-radius: 2px; }
+.panel-ghost { background: var(--bg-2); border: 1px solid var(--border); border-radius: 2px; }
+.accent-ring { box-shadow: 0 0 0 2px var(--accent); }
+.lime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+/* ---- classic element chrome -------------------------------------------
+   Element-level defaults: raised beveled buttons, sunken white fields.
+   Class and inline styles in components still win where they set their
+   own paint; these rules supply the desktop look everywhere else. */
+button {
+  font-family: inherit;
+  border-radius: 2px !important;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.9), inset -1px -1px 0 rgba(0, 0, 0, 0.16);
+}
+button:active:not(:disabled) {
+  box-shadow: inset -1px -1px 0 rgba(255, 255, 255, 0.9), inset 1px 1px 0 rgba(0, 0, 0, 0.16);
+}
+button:disabled { color: #6e6a5e; text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8); }
+input:not([type]), input[type="text"], input[type="number"], input[type="password"],
+input[type="search"], input[type="email"], input[type="url"], textarea, select {
+  background-color: #fff;
+  color: var(--text);
+  border: 1px solid #7f7f7f;
+  border-radius: 0;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.14);
+  font-family: inherit;
+  font-size: 13px;
+}
+input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--accent); }
+/* File pickers are driven through their buttons (Open / Import CSV). */
+input[type="file"] { display: none !important; }
+a { color: #1a4f9c; }
+dialog { border-radius: 2px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.35); }
+dialog::backdrop { background: rgba(30, 30, 30, 0.35); }
+table { border-collapse: collapse; }
+thead th { font-weight: 600 !important; }
+
+/* ---- readability floors ------------------------------------------------
+   The shell chrome sets some sizes inline at 9-10px; floors below restore
+   readable sizes in AppShell apps. GUI-builder control internals re-assert
+   their own sizes in controls.css. */
+main button { font-size: 13px !important; }
+main h1 { font-size: 20px !important; }
+main footer { font-size: 12px !important; color: var(--text-dim) !important; }
+main [role="alert"] { font-size: 12px !important; color: #8f1d12 !important; background: #fdecea !important; border-color: var(--danger) !important; }
+main [role="status"] { font-size: 12px !important; }
+/* Tailwind size utilities used across the apps, bumped one step. */
+.text-\[9px\] { font-size: 11px; }
+.text-\[10px\] { font-size: 12px; }
+.text-\[11px\] { font-size: 12.5px; }
+/* Error reds tuned for the dark theme, re-tuned for light surfaces. */
+.text-\[\#ff8a6b\] { color: #a51f14; }
+/* Spreadsheet selected-cell tint (was a lime wash). */
+.bg-\[rgba\(232\,255\,82\,0\.14\)\] { background-color: rgba(49, 106, 197, 0.20); }
+/* Spreadsheet cells: white fields inside the grid table. The override is
+   scoped to the cell utility class so per-cell fill formatting (an inline
+   style) still wins over it. */
+td .bg-\[var\(--bg-3\)\] { background-color: #fff; }
+td input:focus { background-color: var(--bg-4); }
+input[aria-label="Formula bar"] { background-color: #fff !important; }
