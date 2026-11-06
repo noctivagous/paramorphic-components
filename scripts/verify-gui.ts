@@ -27,6 +27,7 @@ import {
 } from "../src/framework";
 import { starterDocument } from "../apps/gui-builder/src/starter";
 import { buildGuiSave, exportSourceJson, parseGuiSave } from "../apps/gui-builder/src/save";
+import { canvasDragMorphs, dragStartRect, parentRelativePoint } from "../apps/gui-builder/src/canvas-drag";
 
 let checks = 0;
 const ok = (cond: unknown, msg: string) => { checks++; assert.ok(cond, msg); };
@@ -157,6 +158,46 @@ const starterRects = resolvedRects(starter, "desktop");
 ok(starterRects.size === starter.nodes.length, "the starter document resolves every node");
 ok(starter.nodes.some(n => n.layoutMode === "stack") && starter.nodes.some(n => n.layoutMode === "grid") && starter.nodes.some(n => n.layoutMode === "absolute"), "starter exercises stack, grid and absolute containers");
 ok(starter.nodes.some(n => n.type === "fader-bank") && starter.nodes.some(n => n.type === "xy-pad") && starter.nodes.some(n => n.type === "adsr-editor"), "starter includes audio-lab controls");
+
+// ---------- canvas drag (apps/gui-builder/src/canvas-drag.ts) ----------
+const applyAll = (doc: GuiDocument, morphs: ScopedAppliedMorph[]): GuiDocument => {
+  let cur = doc;
+  for (const m of morphs) { const r = applyGuiMorph(cur, m); ok(r.ok, `drag morph applies: ${m.name}`); if (r.ok) cur = r.doc; }
+  return cur;
+};
+// The starter's only text-label is a grid child: its stored rect is (0,0)
+// but the grid resolver places it at (324,0) inside gridbox. A drag must
+// start from the resolved rect and the dropped position must stick.
+const labelStart = dragStartRect(starter, "desktop", "g-label")!;
+eq(labelStart, R(324, 0, 100, 36), "drag of a grid child starts from its resolved rect, not its stored (0,0) rect");
+const labelBefore = starterRects.get("g-label")!;
+const labelDropped = applyAll(starter, canvasDragMorphs(starter, "desktop", { id: "g-label", mode: "move", orig: labelStart, cur: { ...labelStart, x: labelStart.x + 80, y: labelStart.y + 40 } }));
+const labelAfter = resolvedRects(labelDropped, "desktop").get("g-label")!;
+eq([labelAfter.absX, labelAfter.absY], [labelBefore.absX + 80, labelBefore.absY + 40], "dragged Label Text stays where dropped instead of bouncing back to its grid slot");
+eq(labelDropped.nodes.find(n => n.id === "g-label")!.parentId, null, "dragging a grid child off its slot frees it to the root");
+// A click (no displacement) is a selection, not an edit.
+eq(canvasDragMorphs(starter, "desktop", { id: "g-label", mode: "move", orig: labelStart, cur: { ...labelStart } }), [], "clicking a node without moving it produces no morphs (no history step, no detach)");
+// A stack child drag also sticks (channel panel lays its children out).
+const sliderStart = dragStartRect(starter, "desktop", "ch-slider")!;
+const sliderDropped = applyAll(starter, canvasDragMorphs(starter, "desktop", { id: "ch-slider", mode: "move", orig: sliderStart, cur: { ...sliderStart, x: sliderStart.x + 24, y: sliderStart.y + 48 } }));
+const sliderAfter = resolvedRects(sliderDropped, "desktop").get("ch-slider")!;
+eq([sliderAfter.absX, sliderAfter.absY], [starterRects.get("ch-slider")!.absX + 24, starterRects.get("ch-slider")!.absY + 48], "dragging a stack child stays where dropped");
+// A root node move keeps working, and dropping onto an absolute container reparents relative to it.
+const faderStart = dragStartRect(starter, "desktop", "faders")!;
+const faderMoved = applyAll(starter, canvasDragMorphs(starter, "desktop", { id: "faders", mode: "move", orig: faderStart, cur: { ...faderStart, x: faderStart.x - 40, y: faderStart.y + 16 } }));
+eq([resolvedRects(faderMoved, "desktop").get("faders")!.absX, resolvedRects(faderMoved, "desktop").get("faders")!.absY], [faderStart.x - 40, faderStart.y + 16], "root node drag moves by the drag delta");
+const ontoPanel = applyAll(starter, canvasDragMorphs(starter, "desktop", { id: "faders", mode: "move", orig: faderStart, cur: { ...faderStart, x: 400, y: 100 } }));
+eq(ontoPanel.nodes.find(n => n.id === "faders")!.parentId, "actions", "dropping a node onto a container reparents it");
+eq([resolvedRects(ontoPanel, "desktop").get("faders")!.absX, resolvedRects(ontoPanel, "desktop").get("faders")!.absY], [400, 100], "a node dropped onto a container lands at the drop point");
+// Resizing a grid child edits its span, the size the grid resolver reads
+// (g-label sits in the last column and cannot widen in-span, so use g-btn).
+const btnStart = dragStartRect(starter, "desktop", "g-btn")!;
+const btnResized = applyAll(starter, canvasDragMorphs(starter, "desktop", { id: "g-btn", mode: "resize", orig: btnStart, cur: { ...btnStart, w: 208, h: 36 } }));
+eq(btnResized.nodes.find(n => n.id === "g-btn")!.grid?.colSpan, 2, "resizing a grid child widens its column span");
+eq(resolvedRects(btnResized, "desktop").get("g-btn")!.w, 208, "grid child resize sticks instead of bouncing back");
+// Palette drops are parent-relative, not canvas-absolute.
+eq(parentRelativePoint(starter, "desktop", "actions", { x: 400, y: 100 }), { x: 36, y: 36 }, "a palette drop onto a selected container is stored relative to that container");
+eq(parentRelativePoint(starter, "desktop", null, { x: 400, y: 100 }), { x: 400, y: 100 }, "a palette drop with no parent keeps canvas coordinates");
 
 const chain: ScopedAppliedMorph[] = [];
 let cur = starter;

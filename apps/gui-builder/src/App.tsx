@@ -16,9 +16,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   appKit,
   applyGuiMorph,
-  applySpringsStruts,
   getControlDef,
-  guiChildren,
   guiHistory,
   GuiRenderer,
   Inspector,
@@ -37,6 +35,7 @@ import { AppShell } from "../../../src/framework/app-kit/Chrome";
 import "../../../src/framework/app-kit/controls/controls.css";
 import { buildGuiSave, exportSourceJson, parseGuiSave } from "./save";
 import { starterDocument } from "./starter";
+import { canvasDragMorphs, dragStartRect, parentRelativePoint } from "./canvas-drag";
 
 const shellRecipe = appKit.instantiate("gui-builder", { title: "GUI Builder" });
 if (!shellRecipe.ok) throw new Error(shellRecipe.errors.join("; "));
@@ -58,7 +57,7 @@ function bootDocument(): GuiDocument {
 
 type DragState = {
   id: string; mode: "move" | "resize"; startX: number; startY: number;
-  orig: LayoutRect; parentStart: { w: number; h: number } | null; cur: LayoutRect;
+  orig: LayoutRect; cur: LayoutRect;
 };
 
 export default function App() {
@@ -116,7 +115,9 @@ export default function App() {
   const addNode = (type: string, at?: { x: number; y: number }) => {
     const def = getControlDef(type); if (!def) return;
     const parent = selected && getControlDef(selected.type)?.container ? selected : null;
-    const rect: LayoutRect = { x: at ? Math.round(at.x) : parent ? 16 : 40, y: at ? Math.round(at.y) : parent ? 32 : 120, w: def.defaultSize.w, h: def.defaultSize.h };
+    // A palette drop point is canvas-absolute; a child rect is parent-relative.
+    const origin = at ? parentRelativePoint(doc, device, parent?.id ?? null, at) : null;
+    const rect: LayoutRect = { x: origin ? origin.x : parent ? 16 : 40, y: origin ? origin.y : parent ? 32 : 120, w: def.defaultSize.w, h: def.defaultSize.h };
     const layouts = { desktop: rect, tablet: { ...rect }, phone: { ...rect, w: Math.min(rect.w, 350) } };
     const node: GuiNode = {
       id: genId(), type, parentId: parent?.id ?? null, props: { ...def.defaultProps }, layouts,
@@ -179,49 +180,30 @@ export default function App() {
   const beginDrag = (e: React.PointerEvent, node: GuiNode, mode: "move" | "resize") => {
     if (preview || node.locked) return;
     e.stopPropagation(); setSelectedId(node.id);
-    const parent = node.parentId ? doc.nodes.find(n => n.id === node.parentId) : null;
-    const pr = parent ? rects.get(parent.id) : null;
-    setDrag({ id: node.id, mode, startX: e.clientX, startY: e.clientY, orig: { ...node.layouts[device] }, parentStart: pr ? { w: pr.w, h: pr.h } : null, cur: { ...node.layouts[device] } });
+    // Drag from the resolved (on-screen) rect: for stack/grid children the
+    // stored rect is not where the node is drawn, and basing the drag on it
+    // made the node jump on pickup and snap back on drop.
+    const start = dragStartRect(doc, device, node.id) ?? { ...node.layouts[device] };
+    setDrag({ id: node.id, mode, startX: e.clientX, startY: e.clientY, orig: start, cur: { ...start } });
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
   const moveDrag = (e: React.PointerEvent) => {
     if (!drag) return;
     const dx = (e.clientX - drag.startX) / zoom, dy = (e.clientY - drag.startY) / zoom;
     let cur: LayoutRect;
-    if (drag.mode === "move") cur = { ...drag.orig, x: Math.round(drag.orig.x + dx), y: Math.round(drag.orig.y + dy) };
-    else cur = { ...drag.orig, w: Math.max(8, Math.round(drag.orig.w + dx)), h: Math.max(8, Math.round(drag.orig.h + dy)) };
-    if (snap) { cur.x = Math.round(cur.x / 8) * 8; cur.y = Math.round(cur.y / 8) * 8; }
+    // Snap the drag delta, not the absolute coordinate: snapping x/y used
+    // to make off-grid nodes jump on pickup, and snapping x/y (rather than
+    // w/h) on a resize shifted the node's origin.
+    const sdx = snap ? Math.round(dx / 8) * 8 : dx, sdy = snap ? Math.round(dy / 8) * 8 : dy;
+    if (drag.mode === "move") cur = { ...drag.orig, x: Math.round(drag.orig.x + sdx), y: Math.round(drag.orig.y + sdy) };
+    else cur = { ...drag.orig, w: Math.max(8, Math.round(drag.orig.w + sdx)), h: Math.max(8, Math.round(drag.orig.h + sdy)) };
     setDrag({ ...drag, cur });
   };
-  const endDrag = (e: React.PointerEvent) => {
+  const endDrag = () => {
     if (!drag) return;
-    const node = doc.nodes.find(n => n.id === drag.id); const finished = drag; setDrag(null);
-    if (!node) return;
-    const morphs: ScopedAppliedMorph[] = [{ name: "gui.setLayout", params: { id: node.id, device, rect: finished.cur, separate: doc.separateLayouts } }];
-    if (finished.mode === "resize" && getControlDef(node.type)?.container && (node.layoutMode ?? "absolute") === "absolute") {
-      for (const child of guiChildren(doc, node.id)) {
-        if (!child.struts) continue;
-        const next = applySpringsStruts(child.layouts[device], { w: finished.orig.w, h: finished.orig.h }, { w: finished.cur.w, h: finished.cur.h }, child.struts);
-        if (JSON.stringify(next) !== JSON.stringify(child.layouts[device])) morphs.push({ name: "gui.setLayout", params: { id: child.id, device, rect: next, separate: doc.separateLayouts } });
-      }
-    }
-    if (finished.mode === "move") {
-      // Drop onto a container (smallest one under the node's centre that is
-      // not the node itself, its descendant, or its current parent) parents it.
-      const centre = { x: (rects.get(node.id)?.absX ?? 0) + finished.cur.x - node.layouts[device].x + finished.cur.w / 2, y: (rects.get(node.id)?.absY ?? 0) + finished.cur.y - node.layouts[device].y + finished.cur.h / 2 };
-      const descendants = new Set(subtreeIds(doc, node.id));
-      const candidates = doc.nodes.filter(n => getControlDef(n.type)?.container && !descendants.has(n.id) && n.id !== node.parentId)
-        .map(n => ({ n, r: rects.get(n.id)! })).filter(({ r }) => r && centre.x >= r.absX && centre.x <= r.absX + r.w && centre.y >= r.absY && centre.y <= r.absY + r.h)
-        .sort((a, b2) => a.r.w * a.r.h - b2.r.w * b2.r.h);
-      const target = candidates[0];
-      if (target) {
-        const rel: LayoutRect = { ...finished.cur, x: Math.round(centre.x - target.r.absX - finished.cur.w / 2), y: Math.round(centre.y - target.r.absY - finished.cur.h / 2) };
-        morphs[0] = { name: "gui.setLayout", params: { id: node.id, device, rect: rel, separate: doc.separateLayouts } };
-        morphs.push({ name: "gui.reparent", params: { id: node.id, parentId: target.n.id } });
-      }
-    }
-    if (morphs.length === 1 && JSON.stringify(finished.cur) === JSON.stringify(node.layouts[device]) && drag.mode !== "move") return;
-    commit(morphs);
+    const finished = drag; setDrag(null);
+    const morphs = canvasDragMorphs(doc, device, finished);
+    if (morphs.length) commit(morphs);
   };
 
   const renderNode = (node: GuiNode): React.ReactNode => {
@@ -229,8 +211,8 @@ export default function App() {
     if (!r || !def) return null;
     const Comp = def.component;
     const dragRect = drag && drag.id === node.id ? drag.cur : null;
-    const absX = r.absX + (dragRect ? dragRect.x - node.layouts[device].x : 0);
-    const absY = r.absY + (dragRect ? dragRect.y - node.layouts[device].y : 0);
+    const absX = r.absX + (dragRect ? dragRect.x - r.x : 0);
+    const absY = r.absY + (dragRect ? dragRect.y - r.y : 0);
     const w = dragRect ? dragRect.w : r.w, h = dragRect ? dragRect.h : r.h;
     return <div key={node.id} data-node={node.id}
       onPointerDown={e => beginDrag(e, node, "move")}
@@ -297,7 +279,7 @@ export default function App() {
                 <GuiRenderer document={doc} device={device} values={previewValues} onValueChange={(id, patch) => setPreviewValues(v => ({ ...v, [id]: { ...(v[id] ?? {}), ...patch } }))} />
               </div>
             : <div ref={canvasRef} role="application" aria-label="Design canvas"
-                onPointerMove={moveDrag} onPointerUp={endDrag}
+                onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={() => setDrag(null)}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); const t = e.dataTransfer.getData("text/gui-type"); if (t) { const p = canvasPoint(e); addNode(t, p); } }}
                 onPointerDown={e => { if (e.target === e.currentTarget) setSelectedId(null); }}
