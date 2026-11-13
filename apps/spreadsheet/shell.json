@@ -1,0 +1,258 @@
+{
+  "schema": "paramorphic-shell/2",
+  "base": {
+    "schema": "paramorphic-shell/1",
+    "layout": "sidebar",
+    "title": "",
+    "slots": [
+      "navigation",
+      "content"
+    ],
+    "widths": [
+      1,
+      1
+    ]
+  },
+  "morphs": [
+    {
+      "name": "shell.title",
+      "params": {
+        "value": "Spreadsheet"
+      }
+    },
+    {
+      "name": "shell.layout",
+      "params": {
+        "value": {
+          "layout": "sidebar",
+          "slots": [
+            "inspector",
+            "sheet"
+          ],
+          "widths": [
+            1,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "name": "shell.menus",
+      "params": {
+        "value": [
+          {
+            "id": "file",
+            "label": "File",
+            "items": [
+              {
+                "id": "new",
+                "label": "New sheet…",
+                "shortcut": "Mod+N"
+              },
+              {
+                "id": "open",
+                "label": "Open…",
+                "shortcut": "Mod+O"
+              },
+              {
+                "id": "save",
+                "label": "Save",
+                "shortcut": "Mod+S"
+              },
+              {
+                "id": "reload",
+                "label": "Reload file"
+              }
+            ]
+          },
+          {
+            "id": "edit",
+            "label": "Edit",
+            "items": [
+              {
+                "id": "undo",
+                "label": "Undo",
+                "shortcut": "Mod+Z"
+              },
+              {
+                "id": "redo",
+                "label": "Redo",
+                "shortcut": "Mod+Shift+Z"
+              }
+            ]
+          },
+          {
+            "id": "help",
+            "label": "Help",
+            "items": [
+              {
+                "id": "about",
+                "label": "About"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.toolbar",
+      "params": {
+        "value": [
+          {
+            "id": "new",
+            "label": "New"
+          },
+          {
+            "id": "open",
+            "label": "Open"
+          },
+          {
+            "id": "save",
+            "label": "Save"
+          },
+          {
+            "id": "undo",
+            "label": "Undo"
+          },
+          {
+            "id": "redo",
+            "label": "Redo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.dialogs",
+      "params": {
+        "value": [
+          {
+            "id": "about",
+            "title": "About Spreadsheet",
+            "message": "Edit cells from a morph-plan. Save writes a replayable plan; Open validates it before it becomes a sheet."
+          },
+          {
+            "id": "new",
+            "title": "New sheet",
+            "message": "Choose dimensions and whether formulas are enabled.",
+            "submit": "create",
+            "submitLabel": "Create",
+            "fields": [
+              {
+                "id": "width",
+                "label": "Columns",
+                "type": "integer",
+                "min": 1,
+                "max": 64,
+                "value": 5
+              },
+              {
+                "id": "height",
+                "label": "Rows",
+                "type": "integer",
+                "min": 1,
+                "max": 64,
+                "value": 4
+              },
+              {
+                "id": "formulas",
+                "label": "Formulas",
+                "type": "boolean",
+                "value": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.actions",
+      "params": {
+        "value": [
+          {
+            "id": "new",
+            "do": "dialog.open",
+            "target": "new"
+          },
+          {
+            "id": "create",
+            "do": "document.new",
+            "target": "sheet"
+          },
+          {
+            "id": "open",
+            "do": "document.open",
+            "target": "sheet"
+          },
+          {
+            "id": "save",
+            "do": "document.save",
+            "target": "sheet"
+          },
+          {
+            "id": "reload",
+            "do": "document.reload",
+            "target": "sheet"
+          },
+          {
+            "id": "undo",
+            "do": "history.undo",
+            "target": "sheet"
+          },
+          {
+            "id": "redo",
+            "do": "history.redo",
+            "target": "sheet"
+          },
+          {
+            "id": "about",
+            "do": "dialog.open",
+            "target": "about"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.status",
+      "params": {
+        "value": [
+          {
+            "id": "size",
+            "label": "Size"
+          },
+          {
+            "id": "cells",
+            "label": "Cells"
+          },
+          {
+            "id": "history",
+            "label": "History"
+          },
+          {
+            "id": "errors",
+            "label": "Errors"
+          },
+          {
+            "id": "sum",
+            "label": "Sum"
+          },
+          {
+            "id": "avg",
+            "label": "Avg"
+          },
+          {
+            "id": "count",
+            "label": "Count"
+          },
+          {
+            "id": "min",
+            "label": "Min"
+          },
+          {
+            "id": "max",
+            "label": "Max"
+          }
+        ]
+      }
+    }
+  ]
+}

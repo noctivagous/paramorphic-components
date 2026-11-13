@@ -1,0 +1,1 @@
+{"$schema":"paramorphic-app/1","capabilities":[{"name":"storage.folder","required":false}],"entry":{"ref":"shell.json","type":"shell"},"id":"browser","kind":"gui","name":"File Browser","runtime":{"hosts":["browser"],"paramorphic":"0.1.0"},"shell":"shell.json","theme":"classic-desktop","version":"0.1.0"}

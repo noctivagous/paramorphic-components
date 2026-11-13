@@ -27,6 +27,7 @@ export * from "./morphs/scoped";
 export * from "./history";
 export * from "./save";
 export * from "./plan-inventory";
+export * from "./app-manifest";
 export * from "./plan-kits";
 export * from "./app-kit/plans";
 export * from "./app-kit/controls/types";

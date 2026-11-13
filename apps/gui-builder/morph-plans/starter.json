@@ -1,0 +1,625 @@
+{
+  "schema": "paramorphic-gui/1",
+  "device": "desktop",
+  "separateLayouts": true,
+  "nodes": [
+    {
+      "parentId": null,
+      "props": {
+        "title": "Main Toolbar"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 960,
+          "h": 38
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 768,
+          "h": 38
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 38
+        }
+      },
+      "id": "toolbar",
+      "type": "toolbar-strip",
+      "layoutMode": "absolute"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Channel Strip",
+        "radius": 8,
+        "opacity": 1
+      },
+      "layouts": {
+        "desktop": {
+          "x": 32,
+          "y": 64,
+          "w": 300,
+          "h": 230
+        },
+        "tablet": {
+          "x": 24,
+          "y": 62,
+          "w": 348,
+          "h": 232
+        },
+        "phone": {
+          "x": 16,
+          "y": 54,
+          "w": 358,
+          "h": 190
+        }
+      },
+      "id": "channel",
+      "type": "panel",
+      "layoutMode": "stack",
+      "stack": {
+        "direction": "vertical",
+        "spacing": 10,
+        "distribution": "leading",
+        "alignment": "top"
+      }
+    },
+    {
+      "parentId": "channel",
+      "props": {
+        "title": "Volume",
+        "value": 58
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 260,
+          "h": 30
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 316,
+          "h": 30
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 326,
+          "h": 30
+        }
+      },
+      "id": "ch-slider",
+      "type": "slider"
+    },
+    {
+      "parentId": "channel",
+      "props": {
+        "title": "Pan",
+        "value": 30,
+        "variant": "bipolar"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 72
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 72
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 72
+        }
+      },
+      "id": "ch-knob",
+      "type": "knob"
+    },
+    {
+      "parentId": "channel",
+      "props": {
+        "checked": true,
+        "title": ""
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 54,
+          "h": 28
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 54,
+          "h": 28
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 54,
+          "h": 28
+        }
+      },
+      "id": "ch-toggle",
+      "type": "toggle"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Actions (absolute)",
+        "radius": 8,
+        "opacity": 1
+      },
+      "layouts": {
+        "desktop": {
+          "x": 364,
+          "y": 64,
+          "w": 300,
+          "h": 230
+        },
+        "tablet": {
+          "x": 396,
+          "y": 62,
+          "w": 348,
+          "h": 232
+        },
+        "phone": {
+          "x": 16,
+          "y": 260,
+          "w": 358,
+          "h": 190
+        }
+      },
+      "id": "actions",
+      "type": "panel",
+      "layoutMode": "absolute"
+    },
+    {
+      "parentId": "actions",
+      "props": {
+        "title": "Action",
+        "styleVariant": "blue",
+        "radius": 14
+      },
+      "layouts": {
+        "desktop": {
+          "x": 18,
+          "y": 36,
+          "w": 110,
+          "h": 26
+        },
+        "tablet": {
+          "x": 18,
+          "y": 36,
+          "w": 110,
+          "h": 26
+        },
+        "phone": {
+          "x": 16,
+          "y": 40,
+          "w": 110,
+          "h": 26
+        }
+      },
+      "id": "act-run",
+      "type": "pro-button",
+      "struts": {
+        "top": true,
+        "bottom": false,
+        "left": true,
+        "right": false,
+        "hSpring": false,
+        "vSpring": false
+      }
+    },
+    {
+      "parentId": "actions",
+      "props": {
+        "title": "Cancel",
+        "styleVariant": "default",
+        "radius": 14
+      },
+      "layouts": {
+        "desktop": {
+          "x": 142,
+          "y": 36,
+          "w": 110,
+          "h": 26
+        },
+        "tablet": {
+          "x": 142,
+          "y": 36,
+          "w": 110,
+          "h": 26
+        },
+        "phone": {
+          "x": 140,
+          "y": 40,
+          "w": 110,
+          "h": 26
+        }
+      },
+      "id": "act-cancel",
+      "type": "pro-button",
+      "struts": {
+        "top": true,
+        "bottom": false,
+        "left": false,
+        "right": true,
+        "hSpring": false,
+        "vSpring": false
+      }
+    },
+    {
+      "parentId": "actions",
+      "props": {
+        "title": "Armed",
+        "checked": true,
+        "color": "#f2c94c"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 18,
+          "y": 84,
+          "w": 44,
+          "h": 52
+        },
+        "tablet": {
+          "x": 18,
+          "y": 84,
+          "w": 44,
+          "h": 52
+        },
+        "phone": {
+          "x": 16,
+          "y": 84,
+          "w": 44,
+          "h": 52
+        }
+      },
+      "id": "act-led",
+      "type": "led-button"
+    },
+    {
+      "parentId": "actions",
+      "props": {
+        "title": "Enable Option",
+        "checked": false
+      },
+      "layouts": {
+        "desktop": {
+          "x": 90,
+          "y": 92,
+          "w": 150,
+          "h": 20
+        },
+        "tablet": {
+          "x": 90,
+          "y": 92,
+          "w": 150,
+          "h": 20
+        },
+        "phone": {
+          "x": 88,
+          "y": 92,
+          "w": 180,
+          "h": 20
+        }
+      },
+      "id": "act-check",
+      "type": "checkbox"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Grid Section"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 32,
+          "y": 342,
+          "w": 424,
+          "h": 164
+        },
+        "tablet": {
+          "x": 24,
+          "y": 482,
+          "w": 720,
+          "h": 164
+        },
+        "phone": {
+          "x": 16,
+          "y": 622,
+          "w": 358,
+          "h": 164
+        }
+      },
+      "id": "gridbox",
+      "type": "grid-container",
+      "layoutMode": "grid",
+      "gridCfg": {
+        "columns": 4,
+        "gutter": 8,
+        "rowHeight": 36,
+        "rowGutter": 8,
+        "baselineUnit": 8
+      }
+    },
+    {
+      "parentId": "gridbox",
+      "props": {
+        "title": "Grid Btn",
+        "styleVariant": "default",
+        "radius": 8
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        }
+      },
+      "id": "g-btn",
+      "type": "pro-button",
+      "grid": {
+        "colStart": 0,
+        "colSpan": 1,
+        "rowStart": 0,
+        "rowSpan": 1
+      }
+    },
+    {
+      "parentId": "gridbox",
+      "props": {
+        "title": "Grid Check",
+        "checked": true
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 36
+        }
+      },
+      "id": "g-check",
+      "type": "checkbox",
+      "grid": {
+        "colStart": 1,
+        "colSpan": 2,
+        "rowStart": 0,
+        "rowSpan": 1
+      }
+    },
+    {
+      "parentId": "gridbox",
+      "props": {
+        "value": 68
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 14
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 14
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 100,
+          "h": 14
+        }
+      },
+      "id": "g-prog",
+      "type": "progress",
+      "grid": {
+        "colStart": 0,
+        "colSpan": 3,
+        "rowStart": 1,
+        "rowSpan": 1
+      }
+    },
+    {
+      "parentId": "gridbox",
+      "props": {
+        "title": "Placed by span"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 0,
+          "y": 0,
+          "w": 180,
+          "h": 18
+        },
+        "tablet": {
+          "x": 0,
+          "y": 0,
+          "w": 180,
+          "h": 18
+        },
+        "phone": {
+          "x": 0,
+          "y": 0,
+          "w": 180,
+          "h": 18
+        }
+      },
+      "id": "g-label",
+      "type": "text-label",
+      "grid": {
+        "colStart": 3,
+        "colSpan": 1,
+        "rowStart": 0,
+        "rowSpan": 1
+      }
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Faders",
+        "values": "70,55,80,40"
+      },
+      "layouts": {
+        "desktop": {
+          "x": 712,
+          "y": 64,
+          "w": 220,
+          "h": 140
+        },
+        "tablet": {
+          "x": 24,
+          "y": 318,
+          "w": 348,
+          "h": 140
+        },
+        "phone": {
+          "x": 16,
+          "y": 466,
+          "w": 171,
+          "h": 140
+        }
+      },
+      "id": "faders",
+      "type": "fader-bank"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Filter",
+        "x": 35,
+        "y": 60,
+        "spring": false
+      },
+      "layouts": {
+        "desktop": {
+          "x": 712,
+          "y": 224,
+          "w": 220,
+          "h": 94
+        },
+        "tablet": {
+          "x": 396,
+          "y": 318,
+          "w": 348,
+          "h": 140
+        },
+        "phone": {
+          "x": 203,
+          "y": 466,
+          "w": 171,
+          "h": 140
+        }
+      },
+      "id": "xypad",
+      "type": "xy-pad"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "Envelope",
+        "attack": 20,
+        "decay": 30,
+        "sustain": 60,
+        "release": 40
+      },
+      "layouts": {
+        "desktop": {
+          "x": 488,
+          "y": 342,
+          "w": 220,
+          "h": 110
+        },
+        "tablet": {
+          "x": 24,
+          "y": 670,
+          "w": 348,
+          "h": 110
+        },
+        "phone": {
+          "x": 16,
+          "y": 802,
+          "w": 171,
+          "h": 110
+        }
+      },
+      "id": "adsr",
+      "type": "adsr-editor"
+    },
+    {
+      "parentId": null,
+      "props": {
+        "title": "EQ",
+        "low": 55,
+        "mid": 70,
+        "high": 45
+      },
+      "layouts": {
+        "desktop": {
+          "x": 732,
+          "y": 342,
+          "w": 200,
+          "h": 110
+        },
+        "tablet": {
+          "x": 396,
+          "y": 670,
+          "w": 348,
+          "h": 110
+        },
+        "phone": {
+          "x": 203,
+          "y": 802,
+          "w": 171,
+          "h": 110
+        }
+      },
+      "id": "eq",
+      "type": "eq-curve"
+    }
+  ]
+}

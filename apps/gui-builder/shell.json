@@ -1,0 +1,222 @@
+{
+  "schema": "paramorphic-shell/2",
+  "base": {
+    "schema": "paramorphic-shell/1",
+    "layout": "sidebar",
+    "title": "",
+    "slots": [
+      "navigation",
+      "content"
+    ],
+    "widths": [
+      1,
+      1
+    ]
+  },
+  "morphs": [
+    {
+      "name": "shell.title",
+      "params": {
+        "value": "GUI Builder"
+      }
+    },
+    {
+      "name": "shell.layout",
+      "params": {
+        "value": {
+          "layout": "columns",
+          "slots": [
+            "palette",
+            "canvas",
+            "inspector"
+          ],
+          "widths": [
+            1,
+            4,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "shell.menus",
+      "params": {
+        "value": [
+          {
+            "id": "file",
+            "label": "File",
+            "items": [
+              {
+                "id": "new",
+                "label": "New document",
+                "shortcut": "Mod+N"
+              },
+              {
+                "id": "open",
+                "label": "Open…",
+                "shortcut": "Mod+O"
+              },
+              {
+                "id": "save",
+                "label": "Save",
+                "shortcut": "Mod+S"
+              },
+              {
+                "id": "export",
+                "label": "Export JSON"
+              },
+              {
+                "id": "reload",
+                "label": "Reload starter document"
+              }
+            ]
+          },
+          {
+            "id": "edit",
+            "label": "Edit",
+            "items": [
+              {
+                "id": "undo",
+                "label": "Undo",
+                "shortcut": "Mod+Z"
+              },
+              {
+                "id": "redo",
+                "label": "Redo",
+                "shortcut": "Mod+Shift+Z"
+              }
+            ]
+          },
+          {
+            "id": "help",
+            "label": "Help",
+            "items": [
+              {
+                "id": "about",
+                "label": "About"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.toolbar",
+      "params": {
+        "value": [
+          {
+            "id": "new",
+            "label": "New"
+          },
+          {
+            "id": "open",
+            "label": "Open"
+          },
+          {
+            "id": "save",
+            "label": "Save"
+          },
+          {
+            "id": "export",
+            "label": "Export"
+          },
+          {
+            "id": "undo",
+            "label": "Undo"
+          },
+          {
+            "id": "redo",
+            "label": "Redo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.dialogs",
+      "params": {
+        "value": [
+          {
+            "id": "about",
+            "title": "About GUI Builder",
+            "message": "Design interfaces from the app-kit control registry. The document is a paramorphic GUI plan: edits are gui.* morphs, Save writes a replayable chain (or an honest snapshot checkpoint), and GuiRenderer runs the same document in any app."
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.actions",
+      "params": {
+        "value": [
+          {
+            "id": "new",
+            "do": "document.new",
+            "target": "gui"
+          },
+          {
+            "id": "open",
+            "do": "document.open",
+            "target": "gui"
+          },
+          {
+            "id": "save",
+            "do": "document.save",
+            "target": "gui"
+          },
+          {
+            "id": "export",
+            "do": "state.set",
+            "target": "export",
+            "value": true
+          },
+          {
+            "id": "reload",
+            "do": "document.reload",
+            "target": "gui"
+          },
+          {
+            "id": "undo",
+            "do": "history.undo",
+            "target": "gui"
+          },
+          {
+            "id": "redo",
+            "do": "history.redo",
+            "target": "gui"
+          },
+          {
+            "id": "about",
+            "do": "dialog.open",
+            "target": "about"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.status",
+      "params": {
+        "value": [
+          {
+            "id": "nodes",
+            "label": "Nodes"
+          },
+          {
+            "id": "selected",
+            "label": "Selected"
+          },
+          {
+            "id": "device",
+            "label": "Device"
+          },
+          {
+            "id": "history",
+            "label": "History"
+          },
+          {
+            "id": "errors",
+            "label": "Errors"
+          }
+        ]
+      }
+    }
+  ]
+}

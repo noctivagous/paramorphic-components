@@ -1,0 +1,85 @@
+{
+  "$schema": "paramorphic-plan/1",
+  "component": "Grid",
+  "tilingId": "square8",
+  "presetId": "supershape",
+  "width": 2,
+  "height": 1,
+  "ruleSet": {
+    "id": "supershape",
+    "setup": {
+      "width": 2,
+      "height": 1,
+      "description": "Supershape: port-generated sliders drive a Path guest through one relation binding"
+    },
+    "moves": [],
+    "turns": {
+      "type": "free",
+      "order": [],
+      "first": "planner"
+    },
+    "outcomes": [],
+    "end": {
+      "condition": "none",
+      "action": "none"
+    },
+    "regions": []
+  },
+  "occupants": [
+    {
+      "id": "ctl",
+      "anchor": {
+        "q": 0,
+        "r": 0
+      },
+      "span": [],
+      "type": "controls",
+      "data": {
+        "m": 5,
+        "n1": 1,
+        "n2": 1.7,
+        "n3": 1.7,
+        "a": 1,
+        "b": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "preview",
+      "anchor": {
+        "q": 1,
+        "r": 0
+      },
+      "span": [],
+      "type": "preview",
+      "data": {},
+      "tags": [],
+      "guest": {
+        "kind": "Path",
+        "state": {
+          "points": []
+        }
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "shape",
+      "def": "supershape.polar",
+      "in": {
+        "m": "ctl.data.m",
+        "n1": "ctl.data.n1",
+        "n2": "ctl.data.n2",
+        "n3": "ctl.data.n3",
+        "a": "ctl.data.a",
+        "b": "ctl.data.b"
+      },
+      "out": {
+        "points": "preview.guest.points"
+      },
+      "sample": {
+        "count": 180
+      }
+    }
+  ]
+}

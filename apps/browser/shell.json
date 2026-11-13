@@ -1,0 +1,122 @@
+{
+  "schema": "paramorphic-shell/2",
+  "base": {
+    "schema": "paramorphic-shell/1",
+    "layout": "sidebar",
+    "title": "",
+    "slots": [
+      "navigation",
+      "content"
+    ],
+    "widths": [
+      1,
+      1
+    ]
+  },
+  "morphs": [
+    {
+      "name": "shell.title",
+      "params": {
+        "value": "File browser"
+      }
+    },
+    {
+      "name": "shell.layout",
+      "params": {
+        "value": {
+          "layout": "columns",
+          "slots": [
+            "first",
+            "second",
+            "third"
+          ],
+          "widths": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "shell.menus",
+      "params": {
+        "value": [
+          {
+            "id": "file",
+            "label": "File",
+            "items": [
+              {
+                "id": "sample",
+                "label": "Sample files"
+              },
+              {
+                "id": "open-folder",
+                "label": "Open local folder…"
+              }
+            ]
+          },
+          {
+            "id": "help",
+            "label": "Help",
+            "items": [
+              {
+                "id": "about",
+                "label": "About"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.toolbar",
+      "params": {
+        "value": [
+          {
+            "id": "sample",
+            "label": "Sample files"
+          },
+          {
+            "id": "open-folder",
+            "label": "Open local folder…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.dialogs",
+      "params": {
+        "value": [
+          {
+            "id": "about",
+            "title": "About File browser",
+            "message": "Browse sample files or choose a local folder. Files are opened read-only."
+          }
+        ]
+      }
+    },
+    {
+      "name": "shell.actions",
+      "params": {
+        "value": [
+          {
+            "id": "sample",
+            "do": "storage.useSample",
+            "target": "browser"
+          },
+          {
+            "id": "open-folder",
+            "do": "storage.chooseFolder",
+            "target": "browser"
+          },
+          {
+            "id": "about",
+            "do": "dialog.open",
+            "target": "about"
+          }
+        ]
+      }
+    }
+  ]
+}
