@@ -36,6 +36,7 @@ export * from "./app-kit/controls/Inspector";
 export * from "./app-kit/controls/GuiRenderer";
 export * from "./app-kit/gui-document";
 export * from "./app-kit/gui-layout";
+export * from "./app-kit/wireframe";
 export * from "./app-kit/browser";
 export * from "./app-kit/GridLayout";
 export * from "./app-kit/Chrome";

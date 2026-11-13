@@ -9,17 +9,24 @@ import {
   applyGuiMorph,
   applySpringsStruts,
   chainForGuiSave,
+  DEVICES,
+  GUI_CANVAS_MIN_HEIGHT,
+  GUI_DEVICE_WIDTH,
   getControlDef,
   gridLayout,
   guiHistory,
   guiRegistry,
+  layoutFindingLines,
   listControlData,
   listControlDefs,
   loadGuiDocument,
   loadGuiPlan,
   missingComponents,
+  renderSvgWireframe,
   resolvedRects,
+  snapshotGuiDocument,
   stackLayout,
+  summarizeWireframeSnapshot,
   validateGuiDocument,
   type GuiDocument,
   type GuiNode,
@@ -222,5 +229,43 @@ ok(!parseGuiSave("{not json").ok, "a malformed save file is rejected with errors
 ok(!parseGuiSave(JSON.stringify({ schema: "paramorphic-gui/1", nodes: [{ id: "a" }] })).ok, "an invalid document inside a save is rejected, never partially applied");
 const exported = JSON.parse(exportSourceJson(cur));
 ok(exported.device === "desktop" && Array.isArray(exported.widgets) && exported.widgets.length === cur.nodes.length, "source-compatible export carries device + widgets");
+
+// ---------- wireframe snapshots: determinism + starter geometry gate ----------
+// The canvas mirrors the builder's extent rule (see scripts/layout-report.ts):
+// width is the device class width, height grows past the 560px minimum.
+const starterCanvas = (doc: GuiDocument, device: (typeof DEVICES)[number]) => {
+  const rects = resolvedRects(doc, device);
+  let bottom = 0;
+  for (const r of rects.values()) bottom = Math.max(bottom, r.absY + r.h);
+  return { w: GUI_DEVICE_WIDTH[device], h: Math.max(GUI_CANVAS_MIN_HEIGHT, bottom) };
+};
+const fnv1a = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, "0"); };
+const svgOpts = { showLabels: true, showDimensions: true, showOverlaps: true, showGaps: false, showClipping: true } as const;
+for (const device of DEVICES) {
+  const snap = snapshotGuiDocument(starter, device, starterCanvas(starter, device));
+  eq(snap.elements.length, starter.nodes.length, `wireframe snapshot carries every starter node (${device})`);
+  eq(snap.elements.map(e => e.stableId), starter.nodes.map(n => n.id), `snapshot order is document order (${device})`);
+  eq(JSON.stringify(snapshotGuiDocument(starter, device, starterCanvas(starter, device))), JSON.stringify(snap), `snapshot is deterministic (${device})`);
+  const svg = renderSvgWireframe(snap, svgOpts);
+  eq(renderSvgWireframe(snap, svgOpts), svg, `wireframe SVG is deterministic (${device})`);
+  ok(svg.startsWith('<?xml version="1.0"') && svg.includes("<svg"), `wireframe SVG renders (${device})`);
+  // Geometry gate: the gate goes green by the document being right, not by
+  // waiving — the starter's per-device rects are explicit for this reason.
+  eq(snap.analysis?.overlaps ?? [], [], `starter has no overlapping nodes (${device})`);
+  eq(snap.analysis?.clipping ?? [], [], `starter has no parent-clipped nodes (${device})`);
+  eq(snap.layoutAssertions?.overflowXOffenders ?? [], [], `starter has no past-width overflow (${device})`);
+  eq(layoutFindingLines(snap), [], `starter produces zero layout findings (${device})`);
+  eq(summarizeWireframeSnapshot(snap).elementCount, starter.nodes.length, `summary counts the starter elements (${device})`);
+}
+// Golden SVG for the desktop starter: any rect, label, or renderer change
+// breaks this loudly instead of drifting silently.
+const goldenSvg = renderSvgWireframe(snapshotGuiDocument(starter, "desktop", starterCanvas(starter, "desktop")), svgOpts);
+eq([goldenSvg.length, fnv1a(goldenSvg)], [7684, "deec774b"], "desktop starter wireframe SVG matches the golden hash");
+// Analysis sanity on a deliberately bad document: two coincident roots must
+// be reported as an overlap, and a child past its parent as clipping.
+const badGeo = docOf([mkNode("p", "panel", null, R(0, 0, 100, 100)), mkNode("q", "panel", null, R(0, 0, 100, 100)), mkNode("kid", "slider", "p", R(90, 90, 50, 50))]);
+const badSnap = snapshotGuiDocument(badGeo, "desktop", { w: 960, h: 560 });
+ok((badSnap.analysis?.overlaps ?? []).some(o => (o.a === "p" && o.b === "q")), "coincident root panels are reported as an overlap");
+ok((badSnap.analysis?.clipping ?? []).some(c => c.target === "kid" && c.clippedBy === "p"), "a child exceeding its parent is reported as clipping");
 
 console.log(`verify-gui: ${checks} checks passed (${listControlDefs().length} controls, starter ${starter.nodes.length} nodes)`);
