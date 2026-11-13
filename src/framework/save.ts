@@ -7,6 +7,7 @@ import type { PlanBase } from "./plan";
 export type { PlanBase };
 import type { AppliedMorph } from "./morphs/registry";
 import type { HistoryStep } from "./history";
+import type { RelationBinding } from "./relations";
 import type { Occupant } from "./types";
 
 export type AppSaveSettings = {
@@ -24,6 +25,12 @@ export function buildAppSave(args: {
   base: PlanBase;
   adopted: AppliedMorph[];
   past: HistoryStep[];
+  /**
+   * Relation bindings (§8.4) the host holds for this plan. Carried into the
+   * saved document in the plan format's own representation so a save -> load
+   * round trip preserves them; the explicit argument wins over `extra`.
+   */
+  relations?: RelationBinding[];
   extra?: Record<string, unknown>;
 }): { ok: true; plan: any; checkpointed: boolean } | { ok: false; errors: string[] } {
   const stepped = args.past.map(e => e.morph).filter((m): m is AppliedMorph => m !== null);
@@ -54,6 +61,7 @@ export function buildAppSave(args: {
       base: saved.base,
       morphs: saved.morphs,
       ...(args.extra ?? {}),
+      ...(args.relations && args.relations.length > 0 ? { relations: args.relations } : {}),
     },
   };
 }

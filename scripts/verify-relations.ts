@@ -431,4 +431,74 @@ import { RIDE_BINDING, gateOccupants, riderOccupant } from "../apps/supershape/s
   eq(riderEnd, pts[pts.length - 1], "rider position at t=1 equals the last sampled point");
 }
 
+// ---------- D6a: save -> load round trip carries relation bindings ----------
+// The root shell holds bindings in state and publishes them through
+// serializePlan; buildAppSave is the shared stored-plan assembly for the
+// Grid app shells. Both serializers must carry the bindings a loaded plan
+// holds. Before the fix, serializePlan had no relations argument at all and
+// buildAppSave no relations field — bindings vanished on save, and reloading
+// the original file was the only way they survived.
+import { buildAppSave, getTiling, parsePlan, serializePlan } from "../src/framework";
+
+{
+  const loaded = loadPlan({ data: bezierPlanData, errors: [] }, null);
+  ok(loaded.ok, "round trip: demo plan loads");
+  if (loaded.ok) {
+    const plan = loaded.plan;
+    const bindings = plan.relations ?? [];
+    eq(bindings.length, 2, "round trip: demo plan holds two bindings");
+    const before = evaluatePlanRelations(plan.occupants ?? [], bindings);
+
+    // The shell's own save path: serializePlan in JSON mode (the only
+    // round-trippable of its three modes; YAML/XML are display summaries).
+    const text = serializePlan({
+      component: plan.component ?? "Grid",
+      tiling: getTiling(plan.tilingId ?? "square8"),
+      tilingId: plan.tilingId ?? "square8",
+      presetId: plan.presetId,
+      ruleSet: plan.ruleSet,
+      occupants: plan.occupants ?? [],
+      width: plan.width,
+      height: plan.height,
+      regions: plan.regions ?? [],
+      toggles: { gravity: false, diagonal: false, sliding: true, wrapping: false, chainCapture: true },
+      planMode: "json",
+      relations: bindings,
+    });
+    const parsed = parsePlan(text);
+    eq(parsed.errors, [], "round trip: serialized text parses");
+    const reloaded = loadPlan({ data: parsed.data, errors: parsed.errors }, null);
+    ok(reloaded.ok, "round trip: serialized plan reloads");
+    if (reloaded.ok) {
+      eq(reloaded.plan.relations, bindings, "round trip: bindings survive serializePlan -> loadPlan intact");
+      const after = evaluatePlanRelations(reloaded.plan.occupants ?? [], reloaded.plan.relations ?? []);
+      eq(after.quarantined.size, 0, "round trip: reloaded bindings evaluate clean");
+      eq(after.occupants, before.occupants, "round trip: reloaded plan evaluates identically");
+    }
+
+    // The shared stored-plan assembly: buildAppSave with relations.
+    const saved = buildAppSave({
+      settings: {
+        tilingId: plan.tilingId ?? "square8",
+        presetId: plan.presetId,
+        ruleSet: plan.ruleSet,
+        regions: plan.regions ?? [],
+        interpretation: plan.interpretation ?? null,
+      },
+      size: { w: plan.width, h: plan.height },
+      occupants: plan.occupants ?? [],
+      base: plan.base,
+      adopted: plan.morphs,
+      past: [],
+      relations: bindings,
+    });
+    ok(saved.ok, "round trip: buildAppSave accepts a relations-carrying plan");
+    if (saved.ok) {
+      const re2 = loadPlan({ data: saved.plan, errors: [] }, null);
+      ok(re2.ok, "round trip: buildAppSave output reloads");
+      if (re2.ok) eq(re2.plan.relations, bindings, "round trip: bindings survive buildAppSave -> loadPlan intact");
+    }
+  }
+}
+
 console.log(`verify:relations — ${checks} checks passed`);

@@ -372,8 +372,8 @@ export default function App() {
 
   // generate plan text whenever ruleSet etc change
   useEffect(() => {
-    setPlanText(serializePlan({ component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode }));
-  }, [component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode]);
+    setPlanText(serializePlan({ component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode, relations }));
+  }, [component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode, relations]);
 
   // Shared apply target: plan files and pasted text apply through one path.
   const planTarget = {
@@ -431,7 +431,7 @@ export default function App() {
   const saveConfig = async () => {
     const name = saveName || `${presetId}-${tilingId}-${Date.now()}`;
     try {
-      const val = { name, component, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, logicTriples, createdAt: new Date().toISOString() };
+      const val = { name, component, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, logicTriples, relations, createdAt: new Date().toISOString() };
       const rec = await apiCall("records.create", { collection: "configs", value: val, idempotency_key: `cfg-${name}` });
       setConfigs(c => [rec, ...c]);
       setSaveName("");
@@ -451,6 +451,7 @@ export default function App() {
       setWidth(v.width || 6);
       setHeight(v.height || 6);
       setRegions(v.regions || []);
+      setRelations(v.relations || []);
       if (v.logicTriples) setLogicTriples(v.logicTriples);
       setToggles(v.toggles || toggles);
       setOutcome(null);

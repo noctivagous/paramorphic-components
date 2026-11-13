@@ -170,8 +170,15 @@ export function serializePlan(args: {
   regions: Region[];
   toggles: Toggles;
   planMode: PlanMode;
+  /**
+   * Relation bindings (§8.4) the loaded plan holds. JSON mode carries them
+   * in the plan format's own representation, so a save -> load round trip
+   * preserves them; YAML/XML are display summaries and list them by id/def
+   * only, like their occupant summaries.
+   */
+  relations?: RelationBinding[];
 }): string {
-  const { component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode } = args;
+  const { component, tiling, tilingId, presetId, ruleSet, occupants, width, height, regions, toggles, planMode, relations } = args;
     const plan = {
       component,
       tilingId,
@@ -182,7 +189,8 @@ export function serializePlan(args: {
       occupants: occupants.slice(0, 30),
       regions,
       turns: ruleSet.turns,
-      outcomes: ruleSet.outcomes
+      outcomes: ruleSet.outcomes,
+      ...(relations && relations.length > 0 ? { relations } : {})
     };
     if (planMode === "json") {
       return (JSON.stringify(plan, null, 2));
@@ -196,6 +204,7 @@ ${movesXml}
 ${occupants.slice(0, 10).map(o => `    <Occupant id="${o.id}" anchor="${o.anchor.q},${o.anchor.r}" type="${o.type}" player="${o.data?.player || ""}" span="${o.span.length}" guest="${o.guest?.kind || ""}" />`).join("\n")}
   </Grid>
   <Regions count="${regions.length}">${regions.slice(0, 3).map(r => r.id).join(",")}</Regions>
+  <Relations count="${relations?.length ?? 0}">${(relations ?? []).map(b => `${b.id}:${b.def}`).join(",")}</Relations>
 </OcelotPlan>`;
       return (xml);
     } else {
@@ -222,6 +231,7 @@ ${ruleSet.moves.map(m => `    - piece: ${m.pieceType} moves: [${m.moves.map(mk =
   regions: ${regions.length} [${regions.slice(0, 3).map(r => r.id).join(",")}]
   gravity: ${ruleSet.gravity ? JSON.stringify(ruleSet.gravity) : "none"}
 occupants: ${occupants.length} [${occupants.slice(0, 3).map(o => `${o.type}@${o.anchor.q},${o.anchor.r}${o.span.length ? ` span${o.span.length}` : ""}${o.guest ? ` guest:${o.guest.kind}` : ""}`).join(", ")}]
+relations: ${relations?.length ?? 0} [${(relations ?? []).map(b => `${b.id}:${b.def}`).join(", ")}]
 toggles: gravity=${toggles.gravity} diagonal=${toggles.diagonal} sliding=${toggles.sliding} wrapping=${toggles.wrapping} chainCapture=${toggles.chainCapture}
 engine: getValidMoves generic using tiling.directionMap + leaps, outcomes evaluated via tiling.line()
 `;
