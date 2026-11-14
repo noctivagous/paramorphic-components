@@ -18,7 +18,7 @@ for the roadmap and evidence log.
 - `npm run build`, `build:spreadsheet`, `build:player`, `build:keyboard`,
   `build:browser`, `build:gui-builder`, `build:supershape` — per-app Vite builds.
 - `npm run verify:<name>` — `replay`, `browser`, `tilings`, `rules`, `turns`,
-  `games`, `selection`, `sheet`, `gui`, `relations`, `export`, `manifests`. Each bundles its
+  `games`, `selection`, `sheet`, `gui`, `relations`, `export`, `manifests`, `jit`. Each bundles its
   script with esbuild to `/tmp` then runs node. Prefer these over ad-hoc scripts.
 - `npm run gen:plans` — regenerate game plans. `npm run export -- ...` — one-way
   export fork (see TASKS §6).
