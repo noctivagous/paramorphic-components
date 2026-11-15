@@ -2,7 +2,7 @@
    shell theme in src/index.css: light face, beveled buttons, sunken white
    wells, navy selection, strong-contrast text. Token names are kept from
    the earlier dark pro theme so no markup changed. See refs/theme-plan.md. */
-.gui-root, .gui-node {
+.gui-root, .gui-node, .gui-addressed {
   --gui-base: #ece9d8;
   --gui-panel-top: #f4f1e6;
   --gui-panel-btm: #e6e1cd;
@@ -39,6 +39,14 @@
 .gui-toggle-on { background: #316ac5; }
 .gui-toggle-on span { left: 28px; }
 .gui-text-label { display: flex; align-items: center; width: 100%; height: 100%; white-space: nowrap; overflow: hidden; }
+.gui-text-block { width: 100%; height: 100%; white-space: normal; overflow: hidden; line-height: 1.45; color: var(--gui-text); }
+/* AddressedGui (key-click addressing layer): chips + addressed outlines */
+.gui-addressed { position: relative; }
+.gui-chip { position: absolute; z-index: 5; pointer-events: none; font-family: ui-monospace, Consolas, monospace; font-size: 9.5px; line-height: 1.5; padding: 0 4px; border-radius: 3px; border: 1px solid var(--gui-accent); background: var(--gui-well); color: var(--gui-text); }
+.gui-chip.is-target { background: var(--gui-accent); color: var(--gui-well); }
+.gui-address-outline { position: absolute; z-index: 4; pointer-events: none; box-sizing: border-box; border-radius: 3px; }
+.gui-address-outline.target { border: 2px solid var(--gui-accent); }
+.gui-address-outline.hover { border: 1px solid var(--gui-dim); }
 .gui-input { width: 100%; height: 100%; background: var(--gui-well); border: 1px solid #7f7f7f; color: var(--gui-text); padding: 0 8px; font-size: 12px; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.14); }
 .gui-textarea { padding: 6px 8px; resize: none; }
 .gui-check { display: flex; align-items: center; gap: 6px; cursor: pointer; height: 100%; }
@@ -98,7 +106,12 @@
    canvas a classic light work surface without touching markup. If the
    builder's canvas markup changes, these two rules are the ones to move. */
 div:has(> div[data-node]) { background-color: #cfc9b0 !important; background-image: linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px) !important; }
-div:has(> .gui-root) { background-color: #ece9d8 !important; }
+/* The hosted-document backdrop follows the --gui-base token rather
+   than a hard-coded colour: the builder keeps the classic surface
+   (it never overrides the token), while an embedding app that
+   re-tokens its host container gets its own surface. Found by Flat
+   Space, whose dark board was painted cream through this rule. */
+div:has(> .gui-root) { background-color: var(--gui-base, #ece9d8) !important; }
 /* Inspector */
 .gui-inspector { display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
 .gui-inspector label { display: flex; flex-direction: column; gap: 3px; color: var(--gui-dim, #3f3d35); font-size: 11px; }

@@ -61,6 +61,12 @@ export type ControlProps = {
   props: Record<string, unknown>;
   onChange?: (patch: Record<string, unknown>) => void;
   interactive?: boolean;
+  /** Form submission gesture for field controls: Enter inside a
+      single-line input-field. A change patch cannot express it (it is
+      an event, not a value), so it rides its own channel; the host
+      decides what submission means. Derived from Flat Space's WEB
+      address bar, the first hosted field that had to act on Enter. */
+  onSubmit?: () => void;
 };
 
 export type ControlComponent = React.ComponentType<ControlProps>;
