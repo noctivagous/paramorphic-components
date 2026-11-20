@@ -322,6 +322,7 @@ Examples from the source: a chess piece is a single-cell occupant, a Tetris bloc
 | Rules | Adjacency and movement rules written against the tiling’s neighbor function, snapping (timebase, beats), per-row/column/box constraints (Sudoku), flipping (Othello). |
 | Interpretation | Same grid as calendar, spreadsheet, board, keyboard, timeline, dashboard. |
 | Morph chain | Bare grid, then 8×8, then alternating style, then occupants with move rules, then turn logic, an initial arrangement and win conditions, which gives checkers. Chess shares the grid, occupant and turn kernel and differs in piece types, move sets, setup and end conditions. |
+| Operations | The section 8.7 verbs over cells and occupants: Insert places an occupant (span-checked by `checkPlacement` in `src/framework/editing.ts`), Delete clears a cell, Replace swaps an occupant in its cell, Move relocates to another cell, Transform applies a function over a region, Compare is a cell-wise diff and Merge an overlay under a resolution policy. Identity default: the cell address. Fallout default: an occupant's span goes with it. |
 | Applications | Board games, block games, sequencers and piano roll, drum pads, keyboards and remotes, tabs, paginators, split and zoomable views, spreadsheets, calendars, dashboards, NLE timelines. |
 
 ### 6.1a Grid geometry: the tiling parameter
@@ -367,6 +368,7 @@ The existing hexagon painter, which paints by activating cells on a hex grid, is
 | Rules | Directedness, acyclicity, degree limits, typing of nodes and edges. |
 | Interpretation | Flowchart, wiring diagram, state machine, application scene graph, dependency graph, network topology, knowledge graph. |
 | Morph chain | Untyped graph, then directed, then acyclic, then single-parent, which gives a tree. |
+| Operations | The section 8.7 verbs over nodes and edges: Insert adds a node and its edges, Delete removes a node (fallout slot decides its edges: detach by default, cascade or block by binding), Replace swaps node or edge content with wiring unchanged, Move rewires, Transform applies over a subgraph, Compare is a node/edge diff by identity and Merge a union with identity resolution. Identity default: the node or edge id. |
 | Applications | Visual programming connections, circuit routing, data flow, topology views. |
 
 This section is new. It exists to hold what Tree, Path and Logic share.
@@ -382,6 +384,7 @@ This section is new. It exists to hold what Tree, Path and Logic share.
 | Rules | Single parent, sibling ordering, allowed child types, depth limits. |
 | Interpretation | Same hierarchy as filesystem, organization chart, outline, menu, AST, skill tree, commit history. |
 | Morph chain | Generic tree, then expandable branches, then typed folder/file nodes, then lazy loading, which gives a file explorer. |
+| Operations | The section 8.7 verbs over nodes: Insert adds a node under a parent at an index, Delete removes a node (fallout default: refuse while it has children — the tree vocabulary's standing rule), Replace swaps node content in place, Move reparents and/or reorders siblings (cycle-rejecting), Transform applies over a subtree, Compare is a structural diff and Merge a graft by identity. Identity default: the node id. The disjoint TreeState binding of these verbs is implemented in `src/framework/operations-tree.ts` (section 11.2). |
 | Applications | See the twenty-row applications table in the source, grouped as file systems, architecture, data, programming, UI, documents, organizations, projects, knowledge, commerce, web, education, biology, mathematics, AI, games, conversation, version control, animation and 3D. |
 
 The Grid/Tree correspondences (cell and node, occupancy and content, adjacency and parent-child) are retained as the bridge between the two components.
@@ -397,6 +400,7 @@ The Grid/Tree correspondences (cell and node, occupancy and content, adjacency a
 | Rules | Closed or open, continuity, traversal constraints. |
 | Interpretation | Data kept separate from interpretation: Bézier shape, map route, motion trajectory, wire, signal curve. |
 | Morph chain | Point list, then segments, then curves with handles, then fill and winding, which gives a vector shape. Replacing the interpretation with coordinates and waypoints gives a route. |
+| Operations | The section 8.7 verbs over points and segments: Insert splices a point into a segment, Delete removes a point and the segments re-join, Replace moves a point or swaps a handle, Move re-routes through different points, Transform resamples or re-interprets (interpretation is separate from data, section 6.4), Compare is a point-wise diff and Merge a join under policy. An edit script (section 8.7) is itself a Path whose occupants are operation records. Identity default: position in the point list. |
 | Applications | Vector graphics, geographic routes, motion and animation, connection paths, audio automation. |
 
 ### 6.5 Paramorphic Protocol
@@ -410,6 +414,7 @@ The Grid/Tree correspondences (cell and node, occupancy and content, adjacency a
 | Rules | State-transition tables, addressing rules. |
 | Interpretation | Same envelope as REST, WebSocket, CAN frame, MIDI stream. |
 | Morph chain | blob, varInt length frame, stream ordering, crc32 checksum, ack window of size 1, TLS wrapper, which gives an HTTP/2-lite. |
+| Operations | The section 8.7 verbs over a stream in time, and the family's thinnest row, stated honestly: Insert appends a frame, Replace and Delete apply only where the reliability rules admit them (a delivered frame cannot be retracted — the admissibility slot carries this), Transform re-encodes, Compare diffs two streams and Merge interleaves sessions under policy. No binding is implemented yet; a consumer (chat or sync, section 11.1 step 4) is what will exercise this row. |
 | Applications | Web and device communication, instrument and bus protocols. |
 
 ### 6.6 Paramorphic Logic
@@ -423,6 +428,7 @@ The Grid/Tree correspondences (cell and node, occupancy and content, adjacency a
 | Rules | Cardinalities, type lattice, evaluation strategy, truth maintenance. |
 | Interpretation | Same triples as SQL schema, Prolog knowledge base, rule engine, business process. |
 | Morph chain | triples, type lattice, enforced cardinalities, timestamps, derived facts via the region derivation DAG, Datalog rules. |
+| Operations | The section 8.7 verbs over triples, inheriting the Graph row's mechanics (the substrate is the Graph kernel's labeled edges): Insert asserts a triple, Delete retracts it (fallout slot decides derived facts — truth maintenance is this slot's Logic-specific binding), Replace swaps a triple's object under the same subject and predicate, Move re-files a triple under another subject, Transform applies an inference step, Compare diffs two triple sets and Merge unions them under the type lattice and cardinalities. Identity default: the whole triple. |
 | Applications | Schemas, knowledge bases, rule engines, process flows. |
 
 ## 7. Timeline: where the NLE material goes
@@ -575,6 +581,39 @@ The security stance is plain. Derivation never executes page code: a page parsed
 
 Finally, the platform limit, stated once: a parsed document is never rendered, so it has no geometry. `rect` is absent throughout a static derivation and its wireframe projection shows structure only; layout analysis of a page exists only where a rendered host supplies real rectangles. No slice may claim page layout findings from a static parse.
 
+### 8.7 Operations
+
+Operations are the content-level verbs: what can be done to the occupants and content a structure holds, as distinct from morphs, which construct components (section 9), and from the composition operators of section 8.1, which combine structures. An operation is defined once; everything data-specific about its application is a binding in a named rule slot. This is the substrate / occupants / rules split (principle 2) applied to change itself, and it is a mechanism over the components, not a seventh component — the same call section 8.4 made for Relation and section 7 for Timeline.
+
+The verb set is small and closed:
+
+| Verb | Shape | Reading |
+| --- | --- | --- |
+| Insert | (structure, position, content) → structure | Add content at a substrate-shaped position |
+| Delete | (structure, target) → structure | Remove content; what happens to what it held or linked is a rule slot, never part of the verb |
+| Replace | (structure, target, content) → structure | The address stays, the content changes |
+| Move | (structure, target, position) → structure | Change position or parentage; a substrate with no positions that can change declines it from its own parameters |
+| Transform | (structure, target or region, function) → structure | Apply a registered function (a Relation, section 8.4 — never code in a plan) |
+| Compare | (structure, structure) → edit script | The difference between two structures, expressed in the other six verbs |
+| Merge | (structure, structure, policy) → structure | Apply a reconciled difference under a resolution policy |
+
+An **edit script is a Path**: an ordered sequence of operation records, so a script can be hosted, stored, replayed and inspected like any other Path, and it publishes under the same rule as every save — whole, or as a clearly marked checkpoint (section 8.5). Merge is the application of a script under policy, not a separate mechanism. Compare is only as good as its identity binding: the default identity is positional, stated per component in its Operations row (section 6), and identity can itself be a parameter — the Luoshu's arrangements are compared under rotation and reflection (section 8.1), where positional identity would count one arrangement as eight.
+
+Four rule slots carry everything a domain needs to say:
+
+| Slot | Question | Examples |
+| --- | --- | --- |
+| Identity | What counts as the same element? | A cell address; a unique node id; a paragraph's position |
+| Admissibility | May this verb run here, on this element, now? | A Sudoku given may not be deleted; a parent must be a folder |
+| Relational fallout | What happens to what the target held or linked? | Delete: refuse if children remain, promote them, or cascade; a graph node's edges detach, cascade or block |
+| Effect | What changes downstream? | Relation dependents recompute (section 8.4); a consumer may price or record the result |
+
+A slot left unbound takes the substrate's stated default. Vocabulary names that already ship are special cases of the verbs, recorded as such rather than re-invented: `upsert` is Insert-or-Replace decided by the identity slot; the tree vocabulary's reparent is Move, its childless-only removal is Delete with fallout bound to refuse; toggling is Replace of a state field; the NLE's ripple, slip and slide (section 7) are Transforms over Grid + Path.
+
+**Operation sets** give the verbs standing as plan data. A set is a named bundle — a substrate, its slot bindings, and any vocabulary-level names expressed over the verbs — that a plan can select and attach, in the same way section 1.2 speaks of a Grid or Graph *with a rule set*. Sets live in a catalogue (section 11.2) that indexes the definitions above and binds them; the catalogue never re-defines a verb, so the chapter and the catalogue cannot drift. If a substrate for Operations is ever named — something Operations holds when nothing is being operated on — promotion to a seventh component is a small ruling and the catalogue becomes its registry; until then the family stays closed at six.
+
+History follows section 8.6's rule, generalised: operations a user makes are recorded as scripts and invert where the substrate allows; operations observed from an external system go to an observation log, never to undo.
+
 ## 9. The morph plan format
 
 The sources call for a concise declarative language and a runtime that can replay a plan. A morph plan is an ordered list of named morphs applied to a component. Illustrative sketch only, not final syntax:
@@ -701,6 +740,8 @@ The missing demo capabilities from §11.1 were added as mechanism, never as app-
 
 | Addition | Generic home | Files |
 | --- | --- | --- |
+| Content operations (the seven verbs, §8.7) | Cross-cutting mechanism over substrate adapters: one engine (apply / script / inverse / compare / merge) plus the four rule slots as the binding surface; Tree binding over the disjoint TreeState, Graph binding over the kernel. The tree vocabulary's morphs are the same operations reconciled, verified by running both paths | `src/framework/operations.ts`, `operations-tree.ts`, `operations-graph.ts`, `scripts/verify-operations.ts` |
+| Operations catalogue (named operation sets) | Registry of plan-data sets (§8.7): a set names its substrate, its slot bindings and vocabulary over the verbs; validated on load, unknown verbs refused with the list. First entries: text editing (Tree) and graph surgery (Graph) | `src/framework/operation-sets.ts`, `operation-sets/*.json` |
 | Substrate traversal (playhead cursor, trigger hits) | Kernel convention (§8.3): ordered walk plus `collectTriggers`; time supplied by the caller | `src/framework/traversal.ts` |
 | Occupant data editing | Behavior morph alongside toggling: immutable `updateOccupantData` / `upsertOccupant` / `removeOccupant` | `src/framework/editing.ts` |
 | Derived data recalculation | Mechanism only: topological order plus cycle detection (`orderForRecalc`, `recomputeDerived`) | `src/framework/derivation.ts` |
